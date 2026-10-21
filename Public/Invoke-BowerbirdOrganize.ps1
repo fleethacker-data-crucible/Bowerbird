@@ -4,7 +4,7 @@ function Invoke-BowerbirdOrganize {
  [CmdletBinding(SupportsShouldProcess=$true)]param(
   [Parameter(Mandatory)][string]$Path,
   [ValidateSet('Auto','Grok','GenAi')][string]$Profile='Auto',
-  [double]$Pass1Threshold=0.65,[int]$MaxVision=25,[switch]$Apply,[switch]$Recurse,[string]$Root
+  [double]$Pass1Threshold=0.65,[int]$MaxVision=25,[switch]$AllowVision,[switch]$Apply,[switch]$Recurse,[string]$Root
  )
  if(-not $Root){$Root=$PSScriptRoot;if(-not $Root){$Root=Get-Location}}
  if((Split-Path $Root -Leaf) -eq 'Public'){$Root=Split-Path $Root -Parent}
@@ -25,7 +25,7 @@ function Invoke-BowerbirdOrganize {
   $meta=Get-BowerbirdImageMetadata -File $f
   $pass1=Invoke-BowerbirdPass1 -File $f -Metadata $meta
   $analysis=$pass1
-  if($pass1.NeedsVision -and $visionUsed -lt $MaxVision){
+  if($AllowVision -and $pass1.Confidence -lt $Pass1Threshold -and $visionUsed -lt $MaxVision){
    Write-Host ("  [{0}/{1}] Vision → {2}" -f $i,$total,$f.Name) -ForegroundColor Cyan
    $analysis=Invoke-BowerbirdPass2 -File $f -Pass1Result $pass1 -Profile $Profile;$visionUsed++
   }else{Write-Host ("  [{0}/{1}] Pass1 → {2} (conf={3:N2})" -f $i,$total,$f.Name,$pass1.Confidence) -ForegroundColor DarkGray}
