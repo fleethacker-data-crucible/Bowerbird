@@ -8,7 +8,8 @@
  [string]$Root=(Join-Path $env:USERPROFILE 'Pictures'),
  [ValidateRange(1025,65535)][int]$Port=8767,
  [switch]$NoBrowser,
- [switch]$AllowCloudAI
+ [switch]$AllowCloudAI,
+ [ValidateSet('Auto','HttpListener','Tcp')][string]$Transport='Auto'
 )
 $ErrorActionPreference='Stop'
 $script:AppRoot=$PSScriptRoot
@@ -34,8 +35,22 @@ $tokenBytes=New-Object byte[] 32
 $rng=[Security.Cryptography.RandomNumberGenerator]::Create()
 try{$rng.GetBytes($tokenBytes)}finally{$rng.Dispose()}
 $script:Token=[Convert]::ToBase64String($tokenBytes).TrimEnd('=').Replace('+','-').Replace('/','_')
-$script:Session=New-Object System.Net.HttpListener
-$script:Session.Prefixes.Add("http://127.0.0.1:$Port/")
+$script:Session=$null
+if($Transport -ne 'Tcp'){
+ $http=New-Object Net.HttpListener
+ $http.Prefixes.Add("http://127.0.0.1:$Port/")
+ try{$http.Start();$script:Session=$http}
+ catch{
+  try{$http.Close()}catch{}
+  if($Transport -eq 'HttpListener'){throw}
+  Write-Warning 'HTTP.sys listener unavailable. Trying the loopback-only TCP transport (no elevation). Confirm local socket use is authorized.'
+ }
+}
+if(-not $script:Session){
+ Add-Type -Path (Join-Path $script:AppRoot 'Private\BowerbirdTcpBridge.cs') -ErrorAction Stop
+ $script:Session=New-Object Bowerbird.Transport.Server($Port)
+ $script:Session.Start()
+}
 function Resolve-WorkspacePath([string]$Relative){
  if([string]::IsNullOrWhiteSpace($Relative) -or $Relative -eq '.'){return $script:AllowedRoot}
  if([IO.Path]::IsPathRooted($Relative)){throw 'Absolute paths are not accepted'}
@@ -240,10 +255,10 @@ function Get-BowerbirdMessages($Body){
   @{role='user';content=($context+[char]10+$prompt)}
  )
 }
-$script:Session.Start()
 $url="http://127.0.0.1:$Port/"
 Write-Host "Bowerbird Studio running at $url" -ForegroundColor Cyan
 Write-Host "Workspace: $script:AllowedRoot"
+Write-Host "Transport: $($script:Session.GetType().Name)"
 Write-Host ('Session URL: '+$url+'?token='+[uri]::EscapeDataString($script:Token)) -ForegroundColor DarkGray
 Write-Host 'Press Ctrl+C to stop.'
 if(-not $NoBrowser){Start-Process ($url+'?token='+[uri]::EscapeDataString($script:Token))}
