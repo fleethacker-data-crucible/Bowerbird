@@ -19,6 +19,11 @@ if(-not (Test-Path $script:DataRoot)){New-Item -ItemType Directory -Path $script
 . (Join-Path $AppRoot 'Private\BowerbirdIntelligence.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdAdvanced.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdStreaming.ps1')
+. (Join-Path $AppRoot 'Private\Get-ImageMetadata.ps1')
+. (Join-Path $AppRoot 'Private\BowerbirdPass1.ps1')
+. (Join-Path $AppRoot 'Private\BowerbirdPass2.ps1')
+. (Join-Path $AppRoot 'Private\BowerbirdNamer.ps1')
+. (Join-Path $AppRoot 'Private\BowerbirdRenameStudio.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdActions.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdLlm.ps1')
 . (Join-Path $AppRoot 'Private\ArcBridge.ps1')
@@ -101,7 +106,7 @@ function Safe-Preview([string]$Relative){
 }
 function Invoke-Api([string]$Route,$Body){
  switch($Route){
-  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;indexExists=(Test-Path $script:IndexPath);cloudAI=[bool]$AllowCloudAI;version='2.0';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional')}}
+  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;indexExists=(Test-Path $script:IndexPath);cloudAI=[bool]$AllowCloudAI;version='2.0';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional','rename')}}
   '/api/files' {return Get-Files -Relative ([string]$Body.path) -Limit 500}
   '/api/preview' {return Safe-Preview ([string]$Body.path)}
   '/api/index' {
@@ -150,6 +155,17 @@ function Invoke-Api([string]$Route,$Body){
    $stats=@(Get-BowerbirdCodeStats -Path $path -Recurse:([bool]$Body.recurse))
    return @{items=@($stats|ForEach-Object {@{path=(Relative-Path $_.Path);language=$_.Language;lines=$_.Lines;code=$_.Code;blank=$_.Blank;comments=$_.Comments}})}
   }
+  '/api/rename-preview' {
+   if([bool]$Body.useVision -and -not $AllowCloudAI){throw 'Vision requires the -AllowCloudAI launch flag'}
+   if([bool]$Body.useVision -and [string]$Body.consent -cne 'VISION_UPLOAD'){throw 'Vision upload requires explicit consent'}
+   $folder=Resolve-WorkspacePath ([string]$Body.path)
+   $plan=New-BowerbirdSmartRenamePlan -Folder $folder -Recurse:([bool]$Body.recurse) -UseVision:([bool]$Body.useVision) -MaxVision ([Math]::Min(25,[Math]::Max(0,[int]$Body.maxVision)))
+   foreach($op in $plan.Operations){Assert-WorkspaceAbsolute $op.Source;Assert-WorkspaceAbsolute $op.Destination}
+   Save-JsonFile $script:PlanPath $plan
+   return @{id=$plan.Id;count=@($plan.Operations).Count;vision=$plan.VisionRequests
+    operations=@($plan.Operations|ForEach-Object {@{source=(Relative-Path $_.Source);destination=(Relative-Path $_.Destination);reason=$_.Reason;confidence=$_.Confidence}})
+    skipped=@($plan.Skipped|ForEach-Object {@{source=(Relative-Path $_.Source);reason=$_.Reason}})}
+  }
   '/api/plan' {
    $rules=@($Body.rules)
    if(-not $rules.Count){throw 'Provide at least one rule'}
@@ -166,6 +182,7 @@ function Invoke-Api([string]$Route,$Body){
    if($Body.confirm -cne 'APPLY'){throw 'Explicit APPLY confirmation required'}
    if(-not (Test-Path $script:PlanPath)){throw 'No plan saved'}
    $plan=Get-Content -LiteralPath $script:PlanPath -Raw|ConvertFrom-Json
+   if([string]$Body.id -cne [string]$plan.Id){throw 'Plan changed since preview; generate a fresh preview'}
    foreach($op in $plan.Operations){Assert-WorkspaceAbsolute $op.Source;Assert-WorkspaceAbsolute $op.Destination}
    $results=@(Invoke-BowerbirdPlan -Plan $plan -JournalPath $script:JournalPath -Apply -Confirm:$false)
    return @{results=$results}
