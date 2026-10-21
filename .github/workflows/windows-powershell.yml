@@ -35,10 +35,15 @@ jobs:
           if (Get-Command node -ErrorAction SilentlyContinue) {
             node --check Web/app.js
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            node Tests/UiContract.js
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
       - name: Intelligence engine smoke test
         shell: powershell
         run: .\Tests\Smoke.ps1
-      - name: Studio HTTP integration test
+      - name: Studio HTTP.sys integration
         shell: powershell
-        run: .\Tests\StudioIntegration.ps1
+        run: .\Tests\StudioIntegration.ps1 -Transport HttpListener
+      - name: Studio loopback TCP integration
+        shell: powershell
+        run: .\Tests\StudioIntegration.ps1 -Transport Tcp
