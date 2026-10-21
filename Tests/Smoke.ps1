@@ -28,6 +28,10 @@ try{
  foreach($debugRule in $debugRules){
   Write-Host ("RULE TEST: Name=$($debugRule.Name) Ext=$($debugRule.Extension -join ',') Min=$($debugRule.MinBytes) Max=$($debugRule.MaxBytes)")
  }
+ foreach($df in $index.Files){
+  $dr=$debugRules[0]
+  Write-Host ("CHECK: file=$($df.Name) ext=$($df.Extension) ext-mismatch=$($null -ne $dr.Extension -and @($dr.Extension).Count -gt 0 -and $df.Extension -notin @($dr.Extension)) pattern=$([bool]$dr.NamePattern) contains=$([bool]$dr.Contains) minexists=$($null -ne $dr.MinBytes) maxexists=$($null -ne $dr.MaxBytes)")
+ }
  $plan=New-BowerbirdPlan -Index $index -RulesPath $rulesPath -DestinationRoot $dest
  Write-Host ('PLAN DEBUG: '+($plan|ConvertTo-Json -Depth 6 -Compress))
  Assert ($plan.Operations.Count -eq 3) 'Plan count'
