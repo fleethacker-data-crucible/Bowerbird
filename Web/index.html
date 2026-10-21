@@ -8,6 +8,7 @@
   <nav aria-label="Primary navigation">
    <button class="nav active" data-view="files">▤ <span>Explorer</span></button>
    <button class="nav" data-view="search">⌕ <span>Intelligent Search</span></button>
+   <button class="nav" data-view="insights">▥ <span>Insights & Agents</span></button>
    <button class="nav" data-view="duplicates">◈ <span>Duplicates</span></button>
    <button class="nav" data-view="organize">▦ <span>Organize</span></button>
    <button class="nav" data-view="code">⌘ <span>Code Insights</span></button>
@@ -19,10 +20,16 @@
   <header class="topbar"><div><span class="eyebrow">YOUR FILES, INTELLIGENTLY ORGANIZED</span><h1 id="page-title">File Explorer</h1></div><div class="top-actions"><button id="refresh" class="ghost">↻ Refresh</button><button id="index" class="primary">✦ Build Index</button></div></header>
   <div id="notice" role="status" aria-live="polite"></div>
   <section class="view active" id="view-files">
-   <div class="toolbar"><div class="breadcrumb"><button id="up" class="ghost">↑ Up</button><span id="cwd">/</span></div><label class="check"><input type="checkbox" id="recurse" checked> Include subfolders when indexing</label></div>
-   <div class="stats"><article><small>Visible items</small><strong id="file-count">—</strong></article><article><small>Workspace</small><strong id="index-state">Not indexed</strong></article><article><small>AI Mode</small><strong id="ai-state">Disabled</strong></article></div>
+   <div class="toolbar"><div class="breadcrumb"><button id="up" class="ghost">↑ Up</button><span id="cwd">/</span></div><div class="toolbar-options"><label class="check"><input type="checkbox" id="recurse" checked> Include subfolders</label><label class="check"><input type="checkbox" id="content-index"> Index file contents locally</label><label class="check"><input type="checkbox" id="ocr-index"> Use available OCR engine</label></div></div>
+   <div class="stats"><article><small>Visible items</small><strong id="file-count">—</strong></article><article><small>Workspace</small><strong id="index-state">Not indexed</strong></article><article><small>AI Mode</small><strong id="ai-state">Disabled</strong></article><article><small>Storage indexed</small><strong id="size-state">—</strong></article></div>
    <div class="panel"><div class="panel-heading"><h2>Files & Folders</h2><span>Double-click folders to explore · Select text files to preview</span></div><div class="table-scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Size</th><th>Modified</th></tr></thead><tbody id="file-table"></tbody></table></div></div>
-   <div class="panel preview"><div class="panel-heading"><h2>File Preview</h2><span id="preview-name">Select a supported text file</span></div><pre id="preview-text">No file selected</pre></div>
+   <div class="panel preview"><div class="panel-heading"><h2>File Preview</h2><span id="preview-name">Select a file</span></div><div id="media-preview"></div><pre id="preview-text">No file selected</pre><div class="formline"><button class="ghost" id="related" disabled>Find related files</button></div><div id="related-results" class="results"></div></div>
+  </section>
+  <section class="view" id="view-insights">
+   <div class="stats"><article><small>Indexed files</small><strong id="insight-files">—</strong></article><article><small>Total size</small><strong id="insight-size">—</strong></article><article><small>Exact duplicate groups</small><strong id="insight-dupes">—</strong></article><article><small>Index errors</small><strong id="insight-errors">—</strong></article></div>
+   <div class="panel"><div class="panel-heading"><h2>File Inventory</h2><span>Summary from the local index</span></div><div id="category-results" class="category-grid muted">Build an index to see your inventory.</div></div>
+   <div class="panel"><div class="panel-heading"><h2>Local Intelligence Agents</h2><span>Read-only reports. No external requests.</span></div><p class="muted">Specialized analysis of classification, duplicate cleanup opportunities, and indexing errors. Actions stay human-approved.</p>
+   <div class="formline"><button class="primary agent-btn" data-agent="triage">▦ Organization Analyst</button><button class="ghost agent-btn" data-agent="cleanup">◈ Duplicate Investigator</button><button class="ghost agent-btn" data-agent="audit">⚑ Privacy & Quality Auditor</button></div><div id="agent-results" class="results muted">Choose an agent to generate a report.</div></div>
   </section>
   <section class="view" id="view-search"><div class="panel"><div class="panel-heading"><h2>Search indexed content</h2><span>Local keyword relevance ranking</span></div><form id="search-form" class="formline"><input id="search-query" placeholder="Find design notes, scripts, requirements…" required><button class="primary">Search</button></form><div id="search-results" class="results muted">Build an index, then search filenames and extracted text.</div></div></section>
   <section class="view" id="view-duplicates"><div class="panel"><div class="panel-heading"><h2>Duplicate Detection</h2><span>Review only. Nothing is deleted automatically.</span></div><div class="formline"><button id="exact" class="primary">Find exact duplicates</button><button id="visual" class="ghost">Find visually similar images</button></div><div id="duplicate-results" class="results muted">Choose a detection mode.</div></div></section>
@@ -36,10 +43,10 @@
   {"Name":"Documents","Extension":[".docx",".pdf",".txt"],"Folder":"Documents"}
 ]</textarea></label>
     <div class="formline"><button class="primary" id="plan">Generate Preview Plan</button><button class="danger" id="apply" disabled>Apply Approved Plan</button><button class="ghost" id="undo">Undo Last Apply</button></div>
-    <div id="plan-results" class="results muted">No proposed moves yet.</div>
+    <div id="plan-results" class="results muted">No proposed moves yet.</div><p class="muted">Previous move journals are archived in the application Data/history folder. Undo checks the file hash before restoring.</p>
    </div>
   </section>
   <section class="view" id="view-code"><div class="panel"><div class="panel-heading"><h2>Code Insights</h2><span>Heuristic source statistics across the workspace</span></div><div class="formline"><button class="primary" id="analyze-code">Analyze Source Files</button></div><div id="code-results" class="results muted">Click Analyze to calculate language and line counts.</div></div></section>
-  <section class="view" id="view-assistant"><div class="panel chat-panel"><div class="panel-heading"><h2>Bowerbird Assistant</h2><span id="ai-hint">Opt-in cloud model integration</span></div><div class="chat" id="messages"><div class="bubble bot">I'm your file intelligence assistant. I can explain organization rules and help interpret your index. Cloud chat must be explicitly enabled by the operator.</div></div><form id="chat-form" class="chat-input"><label class="check"><input type="checkbox" id="chat-index"> Include index summary</label><div class="formline"><textarea id="chat-prompt" rows="2" placeholder="Ask about organizing your workspace…" required></textarea><button class="primary">Send</button></div></form></div></section>
+  <section class="view" id="view-assistant"><div class="panel chat-panel"><div class="panel-heading"><h2>Bowerbird Assistant</h2><span id="ai-hint">Opt-in cloud model integration · live streaming</span></div><div class="chat" id="messages"><div class="bubble bot">I'm your file intelligence assistant. I can explain organization rules and help interpret your index. Cloud chat must be explicitly enabled by the operator.</div></div><form id="chat-form" class="chat-input"><label class="check"><input type="checkbox" id="chat-index"> Include index summary</label><div class="formline"><textarea id="chat-prompt" rows="2" placeholder="Ask about organizing your workspace…" required></textarea><button class="primary">Send</button></div></form></div></section>
  </main>
 </div><script src="/app.js" defer></script></body></html>
