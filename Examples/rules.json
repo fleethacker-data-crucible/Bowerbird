@@ -1,0 +1,5 @@
+[
+  {"Name":"PowerShell source","Extension":[".ps1",".psm1"],"Folder":"Development/PowerShell"},
+  {"Name":"Screenshots","NamePattern":"(?i)screenshot|screen.?shot","Folder":"Images/Screenshots"},
+  {"Name":"Documents","Extension":[".docx",".pdf",".txt"],"Folder":"Documents"}
+]
