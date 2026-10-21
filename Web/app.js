@@ -1,5 +1,5 @@
 'use strict';
-const state={path:'.',token:new URLSearchParams(location.search).get('token')||sessionStorage.getItem('bowerbird-token'),status:null,plan:null,selectedFile:null,previewUrl:null};
+const state={path:'.',token:new URLSearchParams(location.search).get('token')||sessionStorage.getItem('bowerbird-token'),status:null,plan:null,renamePlan:null,selectedFile:null,previewUrl:null};
 if(state.token){sessionStorage.setItem('bowerbird-token',state.token);if(location.search)history.replaceState({},'',location.pathname)}
 const $=id=>document.getElementById(id);
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=String(text);return n}
@@ -14,7 +14,7 @@ async function api(route,body={}){
 }
 async function run(action,done){try{notify('Working…');const result=await action();notify(done||'Done');return result}catch(err){notify(err.message,true);return null}}
 function size(bytes){if(bytes===null||bytes===undefined)return '—';if(bytes<1024)return bytes+' B';if(bytes<1048576)return (bytes/1024).toFixed(1)+' KB';return (bytes/1048576).toFixed(1)+' MB'}
-function show(view){document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b.dataset.view===view));document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.id==='view-'+view));$('page-title').textContent=({files:'File Explorer',search:'Intelligent Search',insights:'Insights & Agents',duplicates:'Duplicate Detection',organize:'File Organization',code:'Code Insights',assistant:'AI Assistant'})[view];if(view==='files')loadFiles();if(view==='insights')loadInsights()}
+function show(view){document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b.dataset.view===view));document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.id==='view-'+view));$('page-title').textContent=({files:'File Explorer',search:'Intelligent Search',insights:'Insights & Agents',duplicates:'Duplicate Detection',organize:'File Organization',rename:'Smart Rename',code:'Code Insights',assistant:'AI Assistant'})[view];if(view==='files')loadFiles();if(view==='insights')loadInsights()}
 document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
 async function loadStatus(){const s=await run(()=>api('status'));if(!s)return;state.status=s;$('connection').textContent='Local server connected';$('workspace').textContent=s.root;$('index-state').textContent=s.indexExists?'Index available':'Not indexed';$('ai-state').textContent=s.cloudAI?'Enabled':'Offline';$('ai-hint').textContent=s.cloudAI?'Streaming connection to configured provider':'Offline assistance · use -AllowCloudAI for approved provider';if(s.indexExists)loadInsights()}
 async function loadFiles(){
@@ -65,7 +65,7 @@ $('exact').addEventListener('click',()=>duplicates(false));$('visual').addEventL
 $('plan').addEventListener('click',async()=>{
  let rules;try{rules=JSON.parse($('rules').value);if(!Array.isArray(rules))throw Error('Rules must be a JSON array')}catch(e){notify('Invalid rules: '+e.message,true);return}
  const data=await run(()=>api('plan',{destination:$('destination').value,rules}),'Plan generated. Review every proposed move.');if(!data)return;
- state.plan=data;$('apply').disabled=!data.count;const target=$('plan-results');clear(target);target.append(el('h3','',data.count+' proposed moves'));
+ state.plan=data;$('apply').disabled=!data.count;$('rename-apply').disabled=true;state.renamePlan=null;const target=$('plan-results');clear(target);target.append(el('h3','',data.count+' proposed moves'));
  for(const op of data.operations)addResult(target,op.source,'→ '+op.destination,op.reason);
  if(data.skipped&&data.skipped.length){target.append(el('h3','',data.skipped.length+' skipped for safety'));for(const op of data.skipped)addResult(target,op.source,'Skipped',op.reason)}
 });
@@ -74,7 +74,7 @@ $('apply').addEventListener('click',async()=>{
  if(!state.plan||!state.plan.count)return;
  if(!confirm('Move '+state.plan.count+' files? Review the preview carefully. This changes files on disk.'))return;
  const phrase=prompt('Type APPLY to authorize the proposed moves:');if(phrase!=='APPLY')return;
- const data=await run(()=>api('apply',{confirm:phrase}),'Apply completed. Inspect results before further changes.');if(!data)return;
+ const data=await run(()=>api('apply',{confirm:phrase,id:state.plan.id}),'Apply completed. Inspect results before further changes.');if(!data)return;
  $('apply').disabled=true;state.plan=null;const target=$('plan-results');clear(target);
  for(const r of data.results)addResult(target,r.Status,r.Source+' → '+r.Destination,r.Error||'');
 });
@@ -83,6 +83,41 @@ $('undo').addEventListener('click',async()=>{
  const phrase=prompt('Type UNDO to confirm:');if(phrase!=='UNDO')return;
  const data=await run(()=>api('undo',{confirm:phrase}),'Undo attempted. Review restored files.');if(data)notify('Undo returned '+(data.restored||[]).length+' restored entries.')
 });
+
+$('rename-plan').addEventListener('click',async()=>{
+ const useVision=$('rename-vision').checked;
+ if(useVision){
+  if(!state.status||!state.status.cloudAI){notify('Vision requires -AllowCloudAI and an approved AI provider.',true);return}
+  if(!confirm('This will send eligible image content to your configured AI service, up to the limit selected. Proceed only with approved images.'))return
+ }
+ const maxVision=Math.max(0,Math.min(25,Number($('rename-limit').value)||0));
+ const data=await run(()=>api('rename-preview',{path:state.path,recurse:$('rename-recurse').checked,useVision,maxVision,consent:useVision?'VISION_UPLOAD':''}),'Rename proposals ready');
+ if(!data)return;
+ state.renamePlan=data;state.plan=null;$('apply').disabled=true;$('rename-apply').disabled=!data.count;
+ const target=$('rename-results');clear(target);
+ target.append(el('h3','',data.count+' rename proposals · '+data.vision+' vision calls'));
+ for(const item of data.operations){
+  addResult(target,item.source,'→ '+item.destination,'Confidence '+Math.round((item.confidence||0)*100)+'% · '+item.reason)
+ }
+ if(data.skipped&&data.skipped.length){
+  target.append(el('h3','',data.skipped.length+' skipped'));
+  for(const item of data.skipped)addResult(target,item.source,'Skipped',item.reason)
+ }
+ if(!data.count)target.append(el('p','muted','No eligible files found, or filenames are already appropriate.'))
+});
+$('rename-vision').addEventListener('change',()=>{state.renamePlan=null;$('rename-apply').disabled=true});
+$('rename-limit').addEventListener('change',()=>{state.renamePlan=null;$('rename-apply').disabled=true});
+$('rename-apply').addEventListener('click',async()=>{
+ const plan=state.renamePlan;if(!plan||!plan.count)return;
+ if(!confirm('Rename '+plan.count+' files exactly as previewed?'))return;
+ if(prompt('Type APPLY to authorize these renames:')!=='APPLY')return;
+ const result=await run(()=>api('apply',{confirm:'APPLY',id:plan.id}),'Renames applied. Undo Last Apply in Organize can restore them.');
+ if(!result)return;
+ state.renamePlan=null;$('rename-apply').disabled=true;
+ const target=$('rename-results');clear(target);
+ for(const entry of result.results)addResult(target,entry.Source,entry.Status,entry.Error||entry.Destination);
+});
+
 $('analyze-code').addEventListener('click',async()=>{
  const data=await run(()=>api('code',{path:'.',recurse:true}),'Source analysis complete');if(!data)return;
  const target=$('code-results');clear(target);const totals={};for(const item of data.items){const t=totals[item.language]||(totals[item.language]={files:0,code:0,lines:0});t.files++;t.code+=item.code;t.lines+=item.lines}
