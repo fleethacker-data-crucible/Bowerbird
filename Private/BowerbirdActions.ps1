@@ -38,13 +38,13 @@ function New-BowerbirdPlan {
  $reserved=New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
  foreach($file in $Index.Files){
   foreach($rule in $rules){
-   $matches=$true
-   if($null -ne $rule.Extension -and @($rule.Extension).Count -gt 0 -and $file.Extension -notin @($rule.Extension)){$matches=$false}
-   if($rule.NamePattern -and $file.Name -notmatch [string]$rule.NamePattern){$matches=$false}
-   if($rule.Contains -and ($file.Name+' '+$file.Text).IndexOf([string]$rule.Contains,[StringComparison]::OrdinalIgnoreCase) -lt 0){$matches=$false}
-   if($null -ne $rule.MinBytes -and [long]$file.Size -lt [long]$rule.MinBytes){$matches=$false}
-   if($null -ne $rule.MaxBytes -and [long]$file.Size -gt [long]$rule.MaxBytes){$matches=$false}
-   if(-not $matches){continue}
+   $ruleMatches=$true
+   if($null -ne $rule.Extension -and @($rule.Extension).Count -gt 0 -and $file.Extension -notin @($rule.Extension)){$ruleMatches=$false}
+   if($rule.NamePattern -and $file.Name -notmatch [string]$rule.NamePattern){$ruleMatches=$false}
+   if($rule.Contains -and ($file.Name+' '+$file.Text).IndexOf([string]$rule.Contains,[StringComparison]::OrdinalIgnoreCase) -lt 0){$ruleMatches=$false}
+   if($null -ne $rule.MinBytes -and [long]$file.Size -lt [long]$rule.MinBytes){$ruleMatches=$false}
+   if($null -ne $rule.MaxBytes -and [long]$file.Size -gt [long]$rule.MaxBytes){$ruleMatches=$false}
+   if(-not $ruleMatches){continue}
    $sub=[string]$rule.Folder
    if([string]::IsNullOrWhiteSpace($sub) -or [IO.Path]::IsPathRooted($sub) -or $sub -match '(^|[\\/])\.\.([\\/]|$)' -or $sub -match '[:*?"<>|]'){throw "Unsafe rule folder: $sub"}
    $destination=[IO.Path]::GetFullPath((Join-Path (Join-Path $root $sub) $file.Name))
