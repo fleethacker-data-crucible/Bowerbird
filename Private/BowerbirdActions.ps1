@@ -41,7 +41,8 @@ function New-BowerbirdPlan {
    $ruleMatches=$true
    if($null -ne $rule.Extension -and @($rule.Extension).Count -gt 0 -and $file.Extension -notin @($rule.Extension)){$ruleMatches=$false}
    if($rule.NamePattern -and $file.Name -notmatch [string]$rule.NamePattern){$ruleMatches=$false}
-   if($rule.Contains -and ($file.Name+' '+$file.Text).IndexOf([string]$rule.Contains,[StringComparison]::OrdinalIgnoreCase) -lt 0){$ruleMatches=$false}
+   $containsValue=if($rule.PSObject.Properties['Contains']){[string]$rule.PSObject.Properties['Contains'].Value}else{''}
+   if($containsValue -and ($file.Name+' '+$file.Text).IndexOf($containsValue,[StringComparison]::OrdinalIgnoreCase) -lt 0){$ruleMatches=$false}
    if($null -ne $rule.MinBytes -and [long]$file.Size -lt [long]$rule.MinBytes){$ruleMatches=$false}
    if($null -ne $rule.MaxBytes -and [long]$file.Size -gt [long]$rule.MaxBytes){$ruleMatches=$false}
    if(-not $ruleMatches){continue}
