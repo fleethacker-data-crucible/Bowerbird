@@ -62,7 +62,7 @@ try{
  $rules=@(@{Name='Text';Extension=@('.txt');Folder='Text'})
  $plan=Call 'plan' @{destination='Organized';rules=$rules}
  Assert ($plan.count -ge 2) 'Organization preview'
- $apply=Call 'apply' @{confirm='APPLY'}
+ $apply=Call 'apply' @{confirm='APPLY';id=$plan.id}
  Assert ((Test-Path (Join-Path $work 'Organized\Text\first.txt'))) 'Apply move'
  $undo=Call 'undo' @{confirm='UNDO'}
  Assert ((Test-Path (Join-Path $work 'first.txt'))) 'Undo move'
