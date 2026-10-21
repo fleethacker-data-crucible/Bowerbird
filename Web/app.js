@@ -120,7 +120,7 @@ async function streamAi(payload,onText){
   if(event==='done')ended=true
  }
  try{
-  while(true){const {done,value}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});
+  while(true){const {done,value}=await reader.read();if(done)break;buffer=(buffer+decoder.decode(value,{stream:true})).replace(/\r/g,'');
    let split;while((split=buffer.indexOf('\n\n'))!==-1){const block=buffer.slice(0,split).replace(/\r/g,'');buffer=buffer.slice(split+2);parse(block)}
   }
   if(buffer.trim())parse(buffer);
