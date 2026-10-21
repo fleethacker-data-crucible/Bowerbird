@@ -41,7 +41,7 @@ function Invoke-BowerbirdPlan {
     $entry.Status='Applied'
    }catch{$entry.Status='Failed';$entry.Error=$_.Exception.Message}
   }
-  if($entry.Status -ne 'Pending'){$records.Add([pscustomobject]$entry)}
+  if(-not ($records | Where-Object {$_.Source -eq $entry.Source -and $_.Destination -eq $entry.Destination})){$records.Add([pscustomobject]$entry)}
   [IO.File]::WriteAllText($JournalPath,(@($records.ToArray())|ConvertTo-Json -Depth 5),(New-Object Text.UTF8Encoding $false))
  }
  return @($records.ToArray())
