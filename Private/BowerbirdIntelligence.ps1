@@ -4,10 +4,11 @@ function Get-BowerbirdText {
  [CmdletBinding()] param([Parameter(Mandatory)][string]$Path,[int]$MaxCharacters=120000)
  $ext=[IO.Path]::GetExtension($Path).ToLowerInvariant()
  if(@('.txt','.md','.csv','.json','.xml','.log','.ps1','.psm1','.psd1','.js','.ts','.css','.html','.htm','.py','.yml','.yaml','.ini','.config') -contains $ext){
-   $reader=New-Object IO.StreamReader($Path,$true); try { $buffer=New-Object char[] $MaxCharacters; $n=$reader.Read($buffer,0,$MaxCharacters); return (-join $buffer[0..([Math]::Max(0,$n-1))]) } finally {$reader.Dispose()}
+   $reader=New-Object IO.StreamReader($Path,$true); try { $buffer=New-Object char[] $MaxCharacters; $n=$reader.Read($buffer,0,$MaxCharacters); if($n -eq 0){return ''}; return (-join $buffer[0..($n-1)]) } finally {$reader.Dispose()}
  }
  if(@('.docx','.xlsx','.pptx') -notcontains $ext){return ''}
  Add-Type -AssemblyName System.IO.Compression
+ Add-Type -AssemblyName System.IO.Compression.FileSystem
  $zip=[IO.Compression.ZipFile]::OpenRead($Path)
  try {
   $parts= @($zip.Entries | Where-Object {
