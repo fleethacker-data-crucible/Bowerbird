@@ -11,6 +11,7 @@
    <button class="nav" data-view="insights">▥ <span>Insights & Agents</span></button>
    <button class="nav" data-view="duplicates">◈ <span>Duplicates</span></button>
    <button class="nav" data-view="organize">▦ <span>Organize</span></button>
+   <button class="nav" data-view="rename">▧ <span>Smart Rename</span></button>
    <button class="nav" data-view="code">⌘ <span>Code Insights</span></button>
    <button class="nav" data-view="assistant">✧ <span>AI Assistant</span></button>
   </nav>
@@ -46,6 +47,15 @@
     <div id="plan-results" class="results muted">No proposed moves yet.</div><p class="muted">Previous move journals are archived in the application Data/history folder. Undo checks the file hash before restoring.</p>
    </div>
   </section>
+  <section class="view" id="view-rename"><div class="panel">
+   <div class="panel-heading"><h2>Smart Screenshot & Image Renamer</h2><span>Metadata first · optional consented visual AI</span></div>
+   <p class="muted">Uses the original Bowerbird naming pipeline: image metadata and filename heuristics, optionally followed by the approved vision model. Preview every proposed rename before applying.</p>
+   <label class="check"><input type="checkbox" id="rename-recurse" checked> Include image subfolders</label>
+   <label class="check"><input type="checkbox" id="rename-vision"> Use AI vision for uncertain images (sends image content to approved provider)</label>
+   <label>Maximum AI vision calls<input type="number" id="rename-limit" value="10" min="0" max="25"></label>
+   <div class="formline"><button class="primary" id="rename-plan">Generate Rename Proposals</button><button class="danger" id="rename-apply" disabled>Apply Approved Renames</button></div>
+   <div id="rename-results" class="results muted">No rename proposals yet. AI vision requires explicit opt-in and cloud permission at launch.</div>
+   </div></section>
   <section class="view" id="view-code"><div class="panel"><div class="panel-heading"><h2>Code Insights</h2><span>Heuristic source statistics across the workspace</span></div><div class="formline"><button class="primary" id="analyze-code">Analyze Source Files</button></div><div id="code-results" class="results muted">Click Analyze to calculate language and line counts.</div></div></section>
   <section class="view" id="view-assistant"><div class="panel chat-panel"><div class="panel-heading"><h2>Bowerbird Assistant</h2><span id="ai-hint">Opt-in cloud model integration · live streaming</span></div><div class="chat" id="messages"><div class="bubble bot">I'm your file intelligence assistant. I can explain organization rules and help interpret your index. Cloud chat must be explicitly enabled by the operator.</div></div><form id="chat-form" class="chat-input"><label class="check"><input type="checkbox" id="chat-index"> Include index summary</label><div class="formline"><textarea id="chat-prompt" rows="2" placeholder="Ask about organizing your workspace…" required></textarea><button class="primary">Send</button></div></form></div></section>
  </main>
