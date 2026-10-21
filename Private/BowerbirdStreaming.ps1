@@ -28,24 +28,24 @@ function Invoke-BowerbirdStreamingChat {
  $request.Timeout=$TimeoutSeconds*1000;$request.ReadWriteTimeout=$TimeoutSeconds*1000
  $request.Headers['Authorization']='Bearer '+$token
  $request.ContentLength=$bytes.Length
- $remote=$null;$input=$null
+ $remote=$null;$responseReader=$null
  try{
   $body=$request.GetRequestStream()
   try{$body.Write($bytes,0,$bytes.Length)}finally{$body.Dispose()}
   $remote=[Net.HttpWebResponse]$request.GetResponse()
   if($remote.StatusCode -ne [Net.HttpStatusCode]::OK){throw "Provider HTTP $([int]$remote.StatusCode)"}
-  $input=New-Object IO.StreamReader($remote.GetResponseStream())
+  $responseReader=New-Object IO.StreamReader($remote.GetResponseStream())
   $received=0
   Write-BowerbirdSse -Response $Response -Event 'start' -Value @{model=$cfg.Model;profile=$cfg.Profile}
   $type=([string]$remote.ContentType).ToLowerInvariant()
   if($type -notlike '*text/event-stream*'){
-   $parsed=$input.ReadToEnd()|ConvertFrom-Json
+   $parsed=$responseReader.ReadToEnd()|ConvertFrom-Json
    $value=''
    if($parsed.choices){$value=[string]$parsed.choices[0].message.content}
    elseif($parsed.candidates){$value=(@($parsed.candidates[0].content.parts)|ForEach-Object {$_.text}) -join ''}
    if($value){Write-BowerbirdSse -Response $Response -Event 'delta' -Value @{text=$value};$received=$value.Length}
   }else{
-   while($null -ne ($line=$input.ReadLine())){
+   while($null -ne ($line=$responseReader.ReadLine())){
     if($line -notmatch '^data:\s*(.+)$'){continue}
     $data=$Matches[1]
     if($data -eq '[DONE]'){break}
@@ -73,7 +73,7 @@ function Invoke-BowerbirdStreamingChat {
  }catch{
   try{Write-BowerbirdSse -Response $Response -Event 'failure' -Value @{error=$_.Exception.Message}}catch{}
  }finally{
-  if($input){$input.Dispose()}
+  if($responseReader){$responseReader.Dispose()}
   if($remote){$remote.Dispose()}
  }
 }
