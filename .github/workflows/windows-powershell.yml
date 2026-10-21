@@ -1,0 +1,44 @@
+name: PowerShell 5.1 integration
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: PowerShell script parser validation
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $errors = @()
+          Get-ChildItem . -Filter '*.ps1' -Recurse | ForEach-Object {
+            $tokens = $null
+            $syntax = $null
+            $null = [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$syntax)
+            if ($syntax.Count -gt 0) {
+              $errors += $syntax
+              Write-Host "ERROR $($_.FullName)"
+              $syntax | ForEach-Object { Write-Host $_ }
+            }
+          }
+          if ($errors.Count -gt 0) { throw "$($errors.Count) PowerShell syntax errors detected" }
+          Write-Host 'All PowerShell scripts parsed successfully.'
+      - name: Check browser JavaScript syntax
+        shell: powershell
+        run: |
+          if (Get-Command node -ErrorAction SilentlyContinue) {
+            node --check Web/app.js
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Intelligence engine smoke test
+        shell: powershell
+        run: .\Tests\Smoke.ps1
+      - name: Studio HTTP integration test
+        shell: powershell
+        run: .\Tests\StudioIntegration.ps1
