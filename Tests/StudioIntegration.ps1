@@ -4,6 +4,7 @@
  Creates a disposable workspace and starts/stops a localhost server.
  Run: powershell.exe -NoProfile -File .\Tests\StudioIntegration.ps1
 #>
+[CmdletBinding()]param([ValidateSet('Auto','HttpListener','Tcp')][string]$Transport='Tcp')
 $ErrorActionPreference='Stop'
 $repo=Split-Path $PSScriptRoot -Parent
 $work=Join-Path ([IO.Path]::GetTempPath()) ('BowerbirdStudioTest_'+[guid]::NewGuid().ToString('N'))
@@ -17,7 +18,7 @@ try{
  [IO.File]::WriteAllText((Join-Path $work 'first.txt'),'unique apple bowerbird analysis')
  Copy-Item (Join-Path $work 'first.txt') (Join-Path $work 'second.txt')
  [IO.File]::WriteAllText((Join-Path $work 'third.ps1'),'Write-Output test')
- $arguments="-NoProfile -NonInteractive -File ""$server"" -Root ""$work"" -Port $port -NoBrowser"
+ $arguments="-NoProfile -NonInteractive -File ""$server"" -Root ""$work"" -Port $port -NoBrowser -Transport $Transport"
  $process=Start-Process -FilePath 'powershell.exe' -ArgumentList $arguments -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
  $session=$null
  for($attempt=0;$attempt -lt 60;$attempt++){
