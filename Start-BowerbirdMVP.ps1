@@ -10,7 +10,7 @@
 param(
  [Parameter(Position=0)][string]$Path,
  [ValidateSet('Auto','Grok','GenAi')][string]$Profile='Auto',
- [double]$Pass1Threshold=0.65,[int]$MaxVision=25,[switch]$Apply,[switch]$Recurse,[switch]$Undo,[string]$AuditLogPath
+ [double]$Pass1Threshold=0.65,[int]$MaxVision=25,[switch]$AllowVision,[switch]$Apply,[switch]$Recurse,[switch]$Undo,[string]$AuditLogPath
 )
 $Root=$PSScriptRoot;if(-not $Root){$Root=Get-Location}
 $Error.Clear();$Global:ErrorActionPreference='Stop'
@@ -73,7 +73,7 @@ try{
   Write-Host '.\Start-BowerbirdMVP.ps1 -Path "D:\Screenshots" -Apply'
   Write-Host '.\Start-BowerbirdMVP.ps1 -Undo';return
  }
- $result=Invoke-BowerbirdOrganize -Path $Path -Profile $Profile -Pass1Threshold $Pass1Threshold -MaxVision $MaxVision -Apply:$Apply -Recurse:$Recurse -Root $Root -WhatIf:(-not $Apply)
+ $result=Invoke-BowerbirdOrganize -Path $Path -Profile $Profile -Pass1Threshold $Pass1Threshold -MaxVision $MaxVision -AllowVision:$AllowVision -Apply:$Apply -Recurse:$Recurse -Root $Root -WhatIf:(-not $Apply)
  Write-BowerbirdLog -Level INFO -Message "Run complete. Applied=$($result.Applied) Vision=$($result.VisionUsed)" -Root $Root
 }catch{Write-CrashReport -Exception $_}
 finally{$ErrorActionPreference='Continue'}
