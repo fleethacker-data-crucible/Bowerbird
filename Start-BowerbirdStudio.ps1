@@ -227,6 +227,7 @@ $script:Session.Start()
 $url="http://127.0.0.1:$Port/"
 Write-Host "Bowerbird Studio running at $url" -ForegroundColor Cyan
 Write-Host "Workspace: $script:AllowedRoot"
+Write-Host ('Session URL: '+$url+'?token='+[uri]::EscapeDataString($script:Token)) -ForegroundColor DarkGray
 Write-Host 'Press Ctrl+C to stop.'
 if(-not $NoBrowser){Start-Process ($url+'?token='+[uri]::EscapeDataString($script:Token))}
 try{
@@ -235,7 +236,7 @@ try{
   try{
    $res.Headers.Add('X-Content-Type-Options','nosniff')
    $res.Headers.Add('Referrer-Policy','no-referrer')
-   $res.Headers.Add('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'")
+   $res.Headers.Add('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-src blob:; frame-ancestors 'none'; base-uri 'none'")
    if($req.Url.AbsolutePath -eq '/' -and $req.HttpMethod -eq 'GET'){
     $page=Join-Path $AppRoot 'Web\index.html'
     $html=[IO.File]::ReadAllText($page)
