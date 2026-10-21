@@ -48,6 +48,13 @@ function Resolve-WorkspacePath([string]$Relative){
  }
  return $candidate
 }
+function Assert-WorkspaceAbsolute([string]$Full){
+ $candidate=[IO.Path]::GetFullPath($Full)
+ $prefix=$script:AllowedRoot+[IO.Path]::DirectorySeparatorChar
+ if($candidate -ine $script:AllowedRoot -and -not $candidate.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)){throw 'Operation references a file outside workspace'}
+ $relative=if($candidate -ieq $script:AllowedRoot){'.'}else{$candidate.Substring($script:AllowedRoot.Length+1)}
+ $null=Resolve-WorkspacePath $relative
+}
 function Relative-Path([string]$Full){
  if($Full -ieq $script:AllowedRoot){return '.'}
  return $Full.Substring($script:AllowedRoot.Length+1).Replace('\','/')
@@ -120,7 +127,7 @@ function Invoke-Api([string]$Route,$Body){
    # Existing planner takes a full destination path; all operations remain under workspace.
    $destination=Resolve-WorkspacePath ([string]$Body.destination)
    $plan=New-BowerbirdPlan -Index (Read-Index) -RulesPath $rulesPath -DestinationRoot $destination
-   foreach($op in $plan.Operations){$null=Resolve-WorkspacePath (Relative-Path $op.Destination)}
+   foreach($op in $plan.Operations){Assert-WorkspaceAbsolute $op.Source;Assert-WorkspaceAbsolute $op.Destination}
    Save-JsonFile $script:PlanPath $plan
    return @{operations=@($plan.Operations|ForEach-Object {@{source=(Relative-Path $_.Source);destination=(Relative-Path $_.Destination);reason=$_.Reason}});count=@($plan.Operations).Count}
   }
@@ -128,7 +135,7 @@ function Invoke-Api([string]$Route,$Body){
    if($Body.confirm -cne 'APPLY'){throw 'Explicit APPLY confirmation required'}
    if(-not (Test-Path $script:PlanPath)){throw 'No plan saved'}
    $plan=Get-Content -LiteralPath $script:PlanPath -Raw|ConvertFrom-Json
-   foreach($op in $plan.Operations){$null=Resolve-WorkspacePath (Relative-Path $op.Source);$null=Resolve-WorkspacePath (Relative-Path $op.Destination)}
+   foreach($op in $plan.Operations){Assert-WorkspaceAbsolute $op.Source;Assert-WorkspaceAbsolute $op.Destination}
    $results=@(Invoke-BowerbirdPlan -Plan $plan -JournalPath $script:JournalPath -Apply -Confirm:$false)
    return @{results=$results}
   }
@@ -136,7 +143,7 @@ function Invoke-Api([string]$Route,$Body){
    if($Body.confirm -cne 'UNDO'){throw 'Explicit UNDO confirmation required'}
    if(-not (Test-Path $script:JournalPath)){throw 'No journal found'}
    $journal=@(Get-Content -LiteralPath $script:JournalPath -Raw|ConvertFrom-Json)
-   foreach($entry in $journal){$null=Resolve-WorkspacePath (Relative-Path $entry.Source);$null=Resolve-WorkspacePath (Relative-Path $entry.Destination)}
+   foreach($entry in $journal){Assert-WorkspaceAbsolute $entry.Source;Assert-WorkspaceAbsolute $entry.Destination}
    $restored=@(Undo-BowerbirdPlan -JournalPath $script:JournalPath -Confirm:$false)
    return @{restored=$restored}
   }
