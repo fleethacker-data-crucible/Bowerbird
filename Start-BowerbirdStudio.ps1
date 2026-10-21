@@ -130,12 +130,12 @@ function Invoke-Api([string]$Route,$Body){
    switch($agent){
     'triage' {
      foreach($category in $insights.categories){
-      $suggestions.Add(@{title=($category.name+' group');detail=($category.count+' files could be organized by type');kind='group'})
+      $suggestions.Add(@{title=($category.name+' group');detail=([string]$category.count+' files could be organized by type');kind='group'})
      }
     }
     'cleanup' {
      $dup=@(Find-BowerbirdDuplicates -Index $index -Mode Exact)
-     foreach($group in ($dup|Select-Object -First 30)){$suggestions.Add(@{title=($group.Files.Count+' exact copies');detail=(@($group.Files|ForEach-Object {Relative-Path $_}) -join ', ');kind='duplicate'})}
+     foreach($group in ($dup|Select-Object -First 30)){$suggestions.Add(@{title=([string]$group.Files.Count+' exact copies');detail=(@($group.Files|ForEach-Object {Relative-Path $_}) -join ', ');kind='duplicate'})}
     }
     'audit' {
      foreach($file in (@($index.Files|Where-Object {$_.Error}|Select-Object -First 30))){$suggestions.Add(@{title=$file.Name;detail=$file.Error;kind='error'})}
