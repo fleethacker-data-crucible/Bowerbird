@@ -39,9 +39,9 @@ function Get-BowerbirdPdfText {
    try{
     $compressed=$latin.GetBytes($data)
     if($compressed.Length -lt 6){continue}
-    $input=New-Object IO.MemoryStream(,$compressed)
-    $input.Position=2
-    $deflate=New-Object IO.Compression.DeflateStream($input,[IO.Compression.CompressionMode]::Decompress,$false)
+    $compressedStream=New-Object IO.MemoryStream(,$compressed)
+    $compressedStream.Position=2
+    $deflate=New-Object IO.Compression.DeflateStream($compressedStream,[IO.Compression.CompressionMode]::Decompress,$false)
     $out=New-Object IO.MemoryStream
     try{
      $buf=New-Object byte[] 8192
@@ -50,7 +50,7 @@ function Get-BowerbirdPdfText {
       if($out.Length -gt 2097152){break}
      }
      $data=$latin.GetString($out.ToArray())
-    } finally {$deflate.Dispose();$out.Dispose();$input.Dispose()}
+    } finally {$deflate.Dispose();$out.Dispose();$compressedStream.Dispose()}
    }catch{continue}
   }
   foreach($block in [regex]::Matches($data,'(?s)\bBT\b(.*?)\bET\b')){
