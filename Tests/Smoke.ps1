@@ -23,6 +23,7 @@ try{
  $rulesPath=Join-Path $temp 'rules.json'
  '[{"Name":"Text","Extension":[".txt"],"Folder":"Text"}]'|Set-Content -LiteralPath $rulesPath
  $plan=New-BowerbirdPlan -Index $index -RulesPath $rulesPath -DestinationRoot $dest
+ Write-Host ('PLAN DEBUG: '+($plan|ConvertTo-Json -Depth 6 -Compress))
  Assert ($plan.Operations.Count -eq 3) 'Plan count'
  $journal=Join-Path $temp 'journal.json'
  $applied=@(Invoke-BowerbirdPlan -Plan $plan -JournalPath $journal -Apply -Confirm:$false)
