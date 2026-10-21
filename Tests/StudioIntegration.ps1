@@ -35,7 +35,12 @@ try{
  $headers=@{'X-Bowerbird-Token'=$token}
  function Call([string]$route,$value){
   $body=ConvertTo-Json -InputObject $value -Depth 10 -Compress
-  return Invoke-RestMethod -Method Post -Uri ($base+$route) -Headers $headers -ContentType 'application/json' -Body $body -TimeoutSec 30
+  try{return Invoke-RestMethod -Method Post -Uri ($base+$route) -Headers $headers -ContentType 'application/json' -Body $body -TimeoutSec 30}
+  catch{
+   $details=''
+   try{$reader=New-Object IO.StreamReader($_.Exception.Response.GetResponseStream());$details=$reader.ReadToEnd();$reader.Dispose()}catch{}
+   throw "Route /api/$route failed: $($_.Exception.Message) $details"
+  }
  }
  $status=Call 'status' @{}
  Assert $status.ok 'Status endpoint'
@@ -73,6 +78,7 @@ try{
 }catch{
  Write-Host ('FAIL: '+$_.Exception.Message) -ForegroundColor Red
  if(Test-Path $stderr){Write-Host (Get-Content -LiteralPath $stderr -Raw -ErrorAction SilentlyContinue)}
+ if(Test-Path $stdout){Write-Host (Get-Content -LiteralPath $stdout -Raw -ErrorAction SilentlyContinue)}
  exit 1
 }finally{
  if($process -and -not $process.HasExited){Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue}
