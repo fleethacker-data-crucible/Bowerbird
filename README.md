@@ -20,7 +20,7 @@ The script opens the browser at `http://127.0.0.1:8767/` with a random per-sessi
 powershell.exe -NoProfile -File .\Start-BowerbirdStudio.ps1 -Root "C:\TestWorkspace" -NoBrowser -Port 8768
 ```
 
-Copy the **Session URL** printed in PowerShell. The UI and API share the loopback-only port. `Ctrl+C` stops the service. `HttpListener` may require an authorized local HTTP URL reservation in some managed Windows configurations; contact IT rather than elevating permissions or bypassing endpoint controls.
+Copy the **Session URL** printed in PowerShell. The UI and API share the loopback-only port. `Ctrl+C` stops the service. By default `-Transport Auto` tries Windows HTTP.sys first and falls back to the built-in loopback TCP server if URL reservation permissions prevent startup. To select the direct socket transport explicitly, use `-Transport Tcp`. To require HTTP.sys only, use `-Transport HttpListener`. These transports bind only to `127.0.0.1`; their use must still be authorized by your workstation and local network policies. Neither transport requires installing third-party software.
 
 ## What is implemented
 
@@ -38,7 +38,7 @@ Copy the **Session URL** printed in PowerShell. The UI and API share the loopbac
 | Local Agents | Read-only organization, duplication, and index-quality analysis; usable without cloud AI |
 | AI Chat | Optional Arc/GenAI/Grok integration, streamed browser output when provider supports SSE; fallback JSON responses |
 | Code Insights | Language and line statistics by extension |
-| Tests | Windows PowerShell parser check, JavaScript parser check, smoke and real localhost HTTP API tests |
+| Tests | Windows PowerShell parser check, JavaScript/DOM contract tests, smoke and real localhost HTTP API tests on both transports |
 
 ### Important implementation distinctions
 
@@ -74,7 +74,7 @@ powershell.exe -NoProfile -File .\Tests\Smoke.ps1
 powershell.exe -NoProfile -File .\Tests\StudioIntegration.ps1
 ```
 
-GitHub Actions also runs the parser, JS syntax and both tests on a Windows runner for each push to main. The Studio integration test exercises authentication, indexing, search, duplicate discovery, related files, local agents, planning, apply, undo and path rejection without any AI token.
+GitHub Actions also runs the parser, JS/DOM checks and integration tests for both HTTP.sys and the pure TCP fallback on a Windows runner for each push to main. The Studio integration test exercises authentication, indexing, search, duplicate discovery, related files, local agents, planning, apply, undo and path rejection without any AI token.
 
 ## Privacy, safety and operations
 
