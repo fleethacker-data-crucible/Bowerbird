@@ -23,7 +23,10 @@ if(-not (Test-Path $script:DataRoot)){New-Item -ItemType Directory -Path $script
 $script:IndexPath=Join-Path $DataRoot 'studio-index.json'
 $script:JournalPath=Join-Path $DataRoot 'studio-journal.json'
 $script:PlanPath=Join-Path $DataRoot 'studio-plan.json'
-$script:Token=[Convert]::ToBase64String((1..32|ForEach-Object{Get-Random -Minimum 0 -Maximum 256}|ForEach-Object{[byte]$_})).TrimEnd('=').Replace('+','-').Replace('/','_')
+$tokenBytes=New-Object byte[] 32
+$rng=[Security.Cryptography.RandomNumberGenerator]::Create()
+try{$rng.GetBytes($tokenBytes)}finally{$rng.Dispose()}
+$script:Token=[Convert]::ToBase64String($tokenBytes).TrimEnd('=').Replace('+','-').Replace('/','_')
 $script:Session=New-Object System.Net.HttpListener
 $script:Session.Prefixes.Add("http://127.0.0.1:$Port/")
 function Resolve-WorkspacePath([string]$Relative){
