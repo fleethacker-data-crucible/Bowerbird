@@ -18,6 +18,7 @@ try{
  [IO.File]::WriteAllText((Join-Path $work 'first.txt'),'unique apple bowerbird analysis')
  Copy-Item (Join-Path $work 'first.txt') (Join-Path $work 'second.txt')
  [IO.File]::WriteAllText((Join-Path $work 'third.ps1'),'Write-Output test')
+ [IO.File]::WriteAllBytes((Join-Path $work 'Screenshot_2026-10-21_123456.png'),[Convert]::FromBase64String('iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAIAAADZF8uwAAAAFUlEQVR4nGP8z0AYMBGhZlQR3RUBAM/gARe7TQcrAAAAAElFTkSuQmCC'))
  $arguments="-NoProfile -NonInteractive -File ""$server"" -Root ""$work"" -Port $port -NoBrowser -Transport $Transport"
  $process=Start-Process -FilePath 'powershell.exe' -ArgumentList $arguments -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
  $session=$null
@@ -60,6 +61,10 @@ try{
  Assert ($agents.suggestions.Count -ge 1) 'Local agents'
  $related=Call 'related' @{path='first.txt'}
  Assert ($related.items.Count -ge 1) 'Related file discovery'
+ $rename=Call 'rename-preview' @{path='.';recurse=$true;useVision=$false;maxVision=0}
+ Assert ($rename.count -ge 1) 'Smart screenshot rename proposal'
+ $mediaResult=Invoke-WebRequest -Method Post -Uri ($base+'media') -Headers $headers -UseBasicParsing -ContentType 'application/json' -Body (@{path='Screenshot_2026-10-21_123456.png'}|ConvertTo-Json) -TimeoutSec 15
+ Assert ($mediaResult.Headers['Content-Type'] -match 'image/png') 'Local image preview'
  $rules=@(@{Name='Text';Extension=@('.txt');Folder='Text'})
  $plan=Call 'plan' @{destination='Organized';rules=$rules}
  Assert ($plan.count -ge 2) 'Organization preview'
