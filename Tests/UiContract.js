@@ -1,0 +1,19 @@
+// Static browser contract tests; Node is CI-only, never required on Nautilus.
+'use strict';
+const fs=require('fs');
+const path=require('path');
+const assert=require('assert');
+const html=fs.readFileSync(path.join(__dirname,'..','Web','index.html'),'utf8');
+const js=fs.readFileSync(path.join(__dirname,'..','Web','app.js'),'utf8');
+const css=fs.readFileSync(path.join(__dirname,'..','Web','style.css'),'utf8');
+new (require('vm').Script)(js,{filename:'Web/app.js'});
+const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(x=>x[1]);
+const known=new Set(ids);
+assert.equal(ids.length,known.size,'DOM ids must be unique');
+const required=[...new Set([...js.matchAll(/\$\('([^']+)'\)/g)].map(x=>x[1]))];
+for(const id of required)assert(known.has(id),'Missing HTML id: '+id);
+for(const [,view] of html.matchAll(/data-view="([^"]+)"/g))assert(known.has('view-'+view),'Navigation target missing: '+view);
+assert(!/\.innerHTML\s*=/.test(js),'Do not insert untrusted file contents via innerHTML');
+assert(/@media/.test(css),'Responsive stylesheet expected');
+assert(/\/api\/stream/.test(js),'Streaming chat route expected');
+console.log('PASS: Bowerbird browser UI contract ('+known.size+' ids, '+required.length+' bound selectors)');
