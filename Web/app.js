@@ -6,9 +6,10 @@ const state={path:'.',token:launchToken||storedToken,status:null,plan:null,renam
 if(state.token){
  try{sessionStorage.setItem('bowerbird-token',state.token);if(location.search)history.replaceState({},'',location.pathname)}catch(_){/* Keep the token in the URL when storage is unavailable. */}
 }
+if(window.BowerbirdDiagnostics)window.BowerbirdDiagnostics.setToken(state.token);
 const $=id=>document.getElementById(id);
 function record(event,target){
- if(!state.token)return;
+ if(!state.token||event==='CLICK'||event==='READY')return;
  const value=String(target||'unknown').replace(/[^a-zA-Z0-9_.:-]/g,'_').slice(0,80)||'unknown';
  fetch('/api/client-event',{method:'POST',headers:{'Content-Type':'application/json','X-Bowerbird-Token':state.token},body:JSON.stringify({event,target:value}),cache:'no-store'}).catch(()=>{});
 }
@@ -22,12 +23,12 @@ async function api(route,body={}){
  if(!state.token)throw Error('Missing session token. Launch the browser from the PowerShell Studio process.');
  const response=await fetch('/api/'+route,{method:'POST',headers:{'Content-Type':'application/json','X-Bowerbird-Token':state.token},body:JSON.stringify(body),cache:'no-store'});
  let data;try{data=await response.json()}catch{throw Error('Server returned an invalid response')}
- if(!response.ok){if(route!=='client-event')record('API_ERROR',route);throw Error(data.error||'Request failed')}
+ if(!response.ok){if(route!=='client-event')record('API_ERROR',route);throw Error((data.error||'Request failed')+(data.requestId?' [Request '+data.requestId+']':''))}
  return data
 }
 async function run(action,done){try{notify('Working…');const result=await action();notify(done||'Done');return result}catch(err){notify(err.message,true);return null}}
 function size(bytes){if(bytes===null||bytes===undefined)return '—';if(bytes<1024)return bytes+' B';if(bytes<1048576)return (bytes/1024).toFixed(1)+' KB';return (bytes/1048576).toFixed(1)+' MB'}
-function show(view){document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b.dataset.view===view));document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.id==='view-'+view));$('page-title').textContent=({files:'File Explorer',search:'Intelligent Search',insights:'Insights & Agents',duplicates:'Duplicate Detection',organize:'File Organization',rename:'Smart Rename',code:'Code Insights',assistant:'AI Assistant'})[view];if(view==='files')return loadFiles();if(view==='insights')return loadInsights()}
+function show(view){document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b.dataset.view===view));document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.id==='view-'+view));$('page-title').textContent=({files:'File Explorer',search:'Intelligent Search',insights:'Insights & Agents',duplicates:'Duplicate Detection',organize:'File Organization',rename:'Smart Rename',code:'Code Insights',assistant:'AI Assistant',diagnostics:'Diagnostics & Feedback'})[view];if(window.BowerbirdDiagnostics)window.BowerbirdDiagnostics.page(view);if(view==='diagnostics')return window.BowerbirdDiagnostics?.activate();if(view==='files')return loadFiles();if(view==='insights')return loadInsights()}
 document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
 async function loadStatus(){const s=await run(()=>api('status'));if(!s)return;state.status=s;$('connection').textContent='Local server connected';$('workspace').textContent=s.root;$('workspace-current').textContent=s.root;$('workspace-path').value=s.root;$('index-state').textContent=s.indexExists?'Index available':'Not indexed';$('ai-state').textContent=s.cloudAI?'Enabled':'Offline';$('ai-hint').textContent=s.cloudAI?'Streaming connection to configured provider':'Offline assistance · use -AllowCloudAI for approved provider';if(s.indexExists)loadInsights()}
 function resetForWorkspaceSwitch(){
@@ -231,30 +232,5 @@ async function streamAi(payload,onText){
  }finally{reader.releaseLock()}
 }
 
-let reportText='';
-async function refreshDiagnostics(){
- const report=await run(()=>api('diagnostics'),'Diagnostic report loaded');
- if(!report)return;
- const events=(report.events||[]).map(x=>[x.time,x.level,x.event,x.route||'',x.message||''].join(' | ')).join('\n');
- reportText=['Bowerbird Studio '+report.version,'Transport: '+report.transport,'Port: '+report.port,'Local log: '+report.logPath,'',events].join('\n');
- $('diagnostics-report').textContent=reportText;
-}
-$('diagnostics').addEventListener('click',()=>{
- const panel=$('diagnostics-panel');panel.hidden=!panel.hidden;
- if(!panel.hidden)refreshDiagnostics();
-});
-$('refresh-diagnostics').addEventListener('click',refreshDiagnostics);
-$('copy-diagnostics').addEventListener('click',async()=>{
- if(!reportText){notify('Load diagnostics first.',true);return}
- try{
-  if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(reportText)}
-  else{
-   const field=document.createElement('textarea');field.value=reportText;
-   field.style.position='fixed';field.style.left='-9999px';document.body.append(field);field.select();
-   if(!document.execCommand('copy'))throw Error('Clipboard unavailable');
-   field.remove();
-  }
-  notify('Diagnostic report copied. Review it before sharing.')
- }catch(err){notify('Unable to copy automatically: '+err.message,true)}
-});
+$('diagnostics').addEventListener('click',()=>show('diagnostics'));
 loadStatus().then(()=>{record('READY','browser_ui');return loadFiles()}).catch(err=>notify('Initialization failed: '+err.message,true));
