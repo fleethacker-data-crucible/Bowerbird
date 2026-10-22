@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bowerbird Studio</title><link rel="stylesheet" href="/style.css"></head>
 <body>
+<noscript><div class="panel" style="margin:12px">Bowerbird Studio requires JavaScript enabled in this browser. If scripts are restricted, use Start-Bowerbird.bat diagnostics and contact your workstation administrator.</div></noscript>
 <div class="shell">
  <aside class="sidebar">
   <div class="brand"><span class="brand-mark">◈</span><div><strong>BOWERBIRD</strong><small>STUDIO / v2.0</small></div></div>
@@ -18,8 +19,14 @@
   <div class="sidebar-bottom"><div class="status-dot"></div><span id="connection">Connecting…</span><small id="workspace">Local workspace</small></div>
  </aside>
  <main>
-  <header class="topbar"><div><span class="eyebrow">YOUR FILES, INTELLIGENTLY ORGANIZED</span><h1 id="page-title">File Explorer</h1></div><div class="top-actions"><button id="refresh" class="ghost">↻ Refresh</button><button id="index" class="primary">✦ Build Index</button></div></header>
+  <header class="topbar"><div><span class="eyebrow">YOUR FILES, INTELLIGENTLY ORGANIZED</span><h1 id="page-title">File Explorer</h1></div><div class="top-actions"><button id="diagnostics" class="ghost">⚙ Diagnostics</button><button id="refresh" class="ghost">↻ Refresh</button><button id="index" class="primary">✦ Build Index</button></div></header>
   <div id="notice" role="status" aria-live="polite"></div>
+  <section id="diagnostics-panel" class="panel" hidden aria-label="Local diagnostics">
+   <div class="panel-heading"><h2>Startup & Click Diagnostics</h2><span>No secrets, request bodies, or file content are recorded.</span></div>
+   <p class="muted">A local report of GUI actions, API statuses, and startup failures. Share this text only if it is approved for your environment.</p>
+   <div class="formline"><button id="refresh-diagnostics" class="ghost">Refresh Report</button><button id="copy-diagnostics" class="primary">Copy Report</button></div>
+   <pre id="diagnostics-report" class="diagnostic-text">Click Refresh Report to inspect startup and browser logs.</pre>
+  </section>
   <section class="view active" id="view-files">
    <div class="toolbar"><div class="breadcrumb"><button id="up" class="ghost">↑ Up</button><span id="cwd">/</span></div><div class="toolbar-options"><label class="check"><input type="checkbox" id="recurse" checked> Include subfolders</label><label class="check"><input type="checkbox" id="content-index"> Index file contents locally</label><label class="check"><input type="checkbox" id="ocr-index"> Use available OCR engine</label></div></div>
    <div class="stats"><article><small>Visible items</small><strong id="file-count">—</strong></article><article><small>Workspace</small><strong id="index-state">Not indexed</strong></article><article><small>AI Mode</small><strong id="ai-state">Disabled</strong></article><article><small>Storage indexed</small><strong id="size-state">—</strong></article></div>
