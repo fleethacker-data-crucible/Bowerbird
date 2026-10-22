@@ -6,21 +6,49 @@
 
 No Python, Node, npm, Git executable, or admin-installed package is required on the target workstation. The development pipeline uses Node only to check syntax on GitHub-hosted Windows runners.
 
-## Start
+## Start: the GUI, not the legacy CLI
 
-Download/clone the repository and run from an authorized PowerShell session:
+**Double-click Start-Bowerbird.bat**. This is the supported GUI launcher, modeled on ARC/Cascade's PowerShell 5.1 -STA, -NoProfile, process-scoped execution settings and browser-native architecture. It opens **Bowerbird Studio**, not the old renamer.
 
-```powershell
-powershell.exe -NoProfile -File .\Start-BowerbirdStudio.ps1 -Root "C:\Users\YOURNAME\Documents"
-```
+The second and only other BAT launcher is Start-Bowerbird-Console.bat for the original screenshot-renaming CLI.
 
-The script opens the browser at `http://127.0.0.1:8767/` with a random per-session token. If browser launch is blocked:
+To select a workspace:
 
-```powershell
-powershell.exe -NoProfile -File .\Start-BowerbirdStudio.ps1 -Root "C:\TestWorkspace" -NoBrowser -Port 8768
-```
+    Start-Bowerbird.bat -Root "C:\Users\YOURNAME\Documents\Screenshots"
 
-Copy the **Session URL** printed in PowerShell. The UI and API share the loopback-only port. `Ctrl+C` stops the service. By default `-Transport Auto` tries Windows HTTP.sys first and falls back to the built-in loopback TCP server if URL reservation permissions prevent startup. To select the direct socket transport explicitly, use `-Transport Tcp`. To require HTTP.sys only, use `-Transport HttpListener`. These transports bind only to `127.0.0.1`; their use must still be authorized by your workstation and local network policies. Neither transport requires installing third-party software.
+If none is supplied, Studio tries Pictures, Documents, the user profile, and finally the current directory. The folder must exist. **The workspace is never created or modified at startup.**
+
+For safe launch diagnostics:
+
+    Start-Bowerbird.bat diagnostics
+
+To start the server without opening a browser:
+
+    Start-Bowerbird.bat -Root "C:\TestWorkspace" -NoBrowser
+
+Copy the Session URL from PowerShell into your browser. It contains a private ephemeral token; don't share it in logs or screenshots. If automatic browser opening is blocked, the backend remains available and prints the manual session URL.
+
+### Ports and workstation compatibility
+
+Normal startup uses **pure Windows PowerShell 5.1 with .NET TcpListener on 127.0.0.1**. No C# compilation, HTTP.sys URL reservation, administrator privileges, Node, Python, or external web-server installation is required. It prefers local port **8767**, and when another app owns that port, binds an available OS-assigned port and prints/opens the actual URL. This follows ARC's auto-port approach.
+
+    Start-Bowerbird.bat -Port 8800
+
+-Port 0 always selects an available port. -FixedPort fails rather than switching ports. -Transport HttpListener and -Transport CompiledTcp remain available as opt-in development alternatives but are not needed for GUI launch. Process-scoped execution settings cannot override enforced Group Policy, AppLocker or WDAC rules.
+
+### Diagnostics and troubleshooting
+
+Startup failures remain visible in the BAT window. The browser has a **Diagnostics** button displaying safe UI button identifiers, API response codes and startup errors. Local logs live under:
+
+    %LOCALAPPDATA%\Bowerbird\Logs
+
+Indices, journals and plans live under:
+
+    %LOCALAPPDATA%\Bowerbird\State
+
+Those paths avoid writing to a possibly read-only installation folder. Logs omit request bodies, image contents, credentials and token query strings. Review diagnostics before sharing.
+
+Run Start-Bowerbird.bat diagnostics when the GUI doesn't start. It checks required files, PowerShell parsing, a local loopback socket, state-folder writability, and effective policy without changing policy.
 
 ## What is implemented
 
@@ -74,7 +102,7 @@ powershell.exe -NoProfile -File .\Tests\Smoke.ps1
 powershell.exe -NoProfile -File .\Tests\StudioIntegration.ps1
 ```
 
-GitHub Actions also runs the parser, JS/DOM checks and integration tests for both HTTP.sys and the pure TCP fallback on a Windows runner for each push to main. The Studio integration test exercises authentication, indexing, search, duplicate discovery, related files, local agents, planning, apply, undo and path rejection without any AI token.
+GitHub Actions checks PowerShell and JS/DOM syntax, startup prerequisites, both HTTP transports, port collisions, the real GUI BAT launcher, and Edge rendering when available. Windows-hosted CI cannot establish behavior under every managed workstation policy. The Studio integration test exercises authentication, indexing, search, duplicate discovery, related files, local agents, planning, apply, undo and path rejection without any AI token.
 
 ## Privacy, safety and operations
 
