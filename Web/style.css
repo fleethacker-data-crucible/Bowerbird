@@ -22,3 +22,9 @@
 .sidebar{position:sticky;top:0;height:100vh}
 @media(max-width:850px){.sidebar{position:static;height:auto}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.toolbar-options{width:100%}}
 @media(max-width:500px){.stats{grid-template-columns:1fr}.top-actions{display:flex;flex-direction:column;align-items:stretch}.topbar{align-items:center}.formline>*{flex:1}.agent-btn{width:100%}}
+
+/* Startup and safe local diagnostics */
+#diagnostics-panel[hidden]{display:none}
+#diagnostics-panel{border-color:#46647a}
+.diagnostic-text{background:#07101a;border:1px solid var(--line);border-radius:8px;padding:16px;overflow:auto;max-height:340px;white-space:pre-wrap;overflow-wrap:anywhere;color:#a8c3d6;font:12px/1.6 Consolas,monospace}
+#notice.error{white-space:pre-wrap}
