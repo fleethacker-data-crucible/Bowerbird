@@ -77,9 +77,8 @@ Write-BowerbirdDiagnostic -Event 'BOOT' -Message 'Starting Bowerbird Studio.'
 . (Join-Path $AppRoot 'Private\BowerbirdLlm.ps1')
 . (Join-Path $AppRoot 'Private\ArcBridge.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdLoopback.ps1')
-$script:IndexPath=Join-Path $DataRoot 'studio-index.json'
-$script:JournalPath=Join-Path $DataRoot 'studio-journal.json'
-$script:PlanPath=Join-Path $DataRoot 'studio-plan.json'
+. (Join-Path $AppRoot 'Private\BowerbirdWorkspace.ps1')
+$null=Set-BowerbirdWorkspace -Folder $script:AllowedRoot -Initial
 $tokenBytes=New-Object byte[] 32
 $rng=[Security.Cryptography.RandomNumberGenerator]::Create()
 try{$rng.GetBytes($tokenBytes)}finally{$rng.Dispose()}
@@ -197,7 +196,15 @@ function Invoke-Api([string]$Route,$Body){
    Write-BowerbirdDiagnostic -Event ('UI_'+$event) -Message $target
    return @{ok=$true}
   }
-  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;port=$Port;transport=$script:Session.GetType().Name;indexExists=(Test-Path $script:IndexPath);cloudAI=[bool]$AllowCloudAI;version='2.1';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional','rename')}}
+  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;port=$Port;transport=$script:Session.GetType().Name;indexExists=(Test-Path $script:IndexPath);cloudAI=[bool]$AllowCloudAI;version='2.2';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional','rename','workspace-switch','workspace-picker')}}
+  '/api/workspace/select' {
+   return Set-BowerbirdWorkspace -Folder ([string]$Body.path)
+  }
+  '/api/workspace/browse' {
+   $chosen=Show-BowerbirdFolderDialog
+   if(-not $chosen){return @{ok=$true;cancelled=$true;root=$script:AllowedRoot;indexExists=(Test-Path -LiteralPath $script:IndexPath)}}
+   return Set-BowerbirdWorkspace -Folder $chosen
+  }
   '/api/files' {return Get-Files -Relative ([string]$Body.path) -Limit 500}
   '/api/preview' {return Safe-Preview ([string]$Body.path)}
   '/api/index' {
