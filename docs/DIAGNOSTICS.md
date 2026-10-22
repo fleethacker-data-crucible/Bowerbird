@@ -45,6 +45,14 @@ By default, descriptions and reproduction notes from manually entered reports ar
 
 No auto-upload, support portal account, API token or third-party issue tracker is required.
 
+## When the local backend stops responding
+
+If the page is still open but PowerShell stops responding, browser events are still available in memory. **Export Session** continues to work without the server.
+
+If you attempt to **Save Local Issue Report** while the backend is unreachable, the browser creates a **download-only emergency issue JSON** containing the details you explicitly entered and available session events. Check your Downloads folder. The issue is not saved to Bowerbird's local Issues directory until the backend becomes available and you report it again. The UI labels these records **Downloaded Only** to distinguish them from persisted reports.
+
+**Download Support Bundle** can also produce a partial browser-only package when the backend is offline. In this mode it includes session events and previously cached sanitized server entries, but cannot retrieve new log data. Manually typed notes are still excluded unless you opt in.
+
 ## If the GUI cannot launch
 
 Run:
