@@ -41,3 +41,54 @@
 .workspace-help{margin:9px 0 0;font-size:12px;color:var(--muted)}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 @media(max-width:850px){.workspace-form{flex-wrap:wrap}.workspace-form input{width:100%;flex-basis:100%}.workspace-form button{flex:1}}
+
+/* Diagnostics & Feedback: dedicated tab based on Cascade's session recorder */
+.diagnostics-intro{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.diagnostics-intro h2{font-size:23px;margin:3px 0}.diagnostics-intro p{margin:5px 0 0;max-width:720px}
+.diag-stats article{min-height:93px}
+.diag-columns{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);gap:18px;align-items:start}
+.diag-columns>.panel{min-width:0;height:calc(100% - 20px)}
+.diag-state{border:1px solid #435467;background:#1a2737;border-radius:7px;padding:6px 12px;color:var(--muted);white-space:nowrap}
+.diag-state.active{border-color:var(--accent);color:var(--accent2)}
+.diag-privacy{padding:10px 12px;border-left:3px solid #667c8f;background:#172431;border-radius:3px;color:var(--muted);font-size:12px;line-height:1.6;margin:12px 0}
+.diag-filters{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin:16px 0;color:var(--muted);font-size:12px}
+.diag-filters label{margin:0!important;display:inline!important}
+.diag-filters select{min-width:145px}
+.diag-filters span{margin-left:auto}
+select{background:#0d1621;color:var(--text);border:1px solid #354559;border-radius:9px;padding:10px 13px;font:inherit;min-height:40px}
+select:focus-visible{outline:2px solid var(--accent)}
+.diag-event-list{border:1px solid var(--line);border-radius:9px;padding:5px 12px;max-height:320px;min-height:88px;overflow-y:auto;background:#0d1621}
+.diag-event-list>p{margin:13px 0}
+.diag-row{padding:10px 2px;border-bottom:1px solid #273748}
+.diag-row:last-child{border-bottom:none}
+.diag-row-main{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.diag-row-main strong{font-size:12px;font-weight:650;letter-spacing:.03em}
+.diag-row-main small{color:var(--muted);font-size:11px}
+.diag-row-error .diag-row-main strong{color:#f2a0a5}
+.diag-row-detail{font-size:12px;color:#afc4d5;margin-top:4px;overflow-wrap:anywhere}
+.diag-request{font:11px/1.5 Consolas,monospace;color:var(--muted);display:block;margin-top:3px}
+.diag-issue-form label:not(.check){display:block;margin:12px 0;font-size:12px;color:var(--muted);font-weight:550}
+.diag-issue-form label:not(.check)>input,.diag-issue-form label:not(.check)>select,.diag-issue-form label:not(.check)>textarea{display:block;width:100%;margin-top:6px}
+.diag-issue-form textarea{font-family:"Segoe UI",Arial,sans-serif;min-height:62px}
+.diag-field-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.diag-issue-list{max-height:650px;overflow-y:auto}
+.diag-issue-card{padding:13px 2px;border-bottom:1px solid var(--line)}
+.diag-issue-head{display:flex;justify-content:space-between;gap:10px}
+.diag-issue-head strong{overflow-wrap:anywhere}
+.diag-issue-status{color:var(--accent2);font-size:11px;text-transform:uppercase;letter-spacing:.8px}
+.diag-issue-card>small{display:block;margin-top:5px;color:var(--muted)}
+.diag-issue-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.diag-issue-actions button{padding:7px 9px;font-size:12px}
+.diag-issue-description{margin-top:12px;background:#0d1621;border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.diag-issue-description p{margin:6px 0}
+.diag-health{display:flex;flex-direction:column}
+.diag-check{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.diag-check:last-child{border-bottom:none}
+.diag-check-icon{display:grid;place-items:center;width:28px;height:28px;flex-shrink:0;border:1px solid #3c6070;border-radius:50%;color:#7acebc}
+.diag-check strong,.diag-check small{display:block}
+.diag-check small{font-size:12px;color:var(--muted);margin-top:2px}
+.diag-message-success,.diag-message-error{margin:8px 0;padding:11px 12px;border:1px solid #3a645d;border-radius:8px;color:#9ce4c6;white-space:pre-wrap}
+.diag-message-error{color:#f1a9af;border-color:#93565e}
+#diag-support-preview{margin-top:15px;max-height:240px;font-size:11px}
+@media(max-width:1050px){.diag-columns{grid-template-columns:1fr}.diag-columns>.panel{height:auto}}
+@media(max-width:600px){.diag-field-grid{grid-template-columns:1fr}.diagnostics-intro{align-items:flex-start}.diag-filters span{margin-left:0}}
