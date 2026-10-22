@@ -354,7 +354,7 @@
    try{
     const json=await buildSupport(includeNotes);
     download('bowerbird-support-'+new Date().toISOString().slice(0,10)+'.json',json);
-    showFeedback('Support bundle downloaded locally. Nothing was uploaded.');
+    showFeedback(recorder.latestBundle&&recorder.latestBundle.offline?'Partial browser-only support bundle download requested: backend was unreachable. Review the file before sharing.':'Support bundle download requested locally. Nothing was uploaded.');
    }catch(err){showFeedback(err.message,true)}
   });
   $('diag-support-copy').addEventListener('click',async()=>{
