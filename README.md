@@ -63,6 +63,26 @@ Those paths avoid writing to a possibly read-only installation folder. Logs omit
 
 Run Start-Bowerbird.bat diagnostics when the GUI doesn't start. It checks required files, PowerShell parsing, a local loopback socket, state-folder writability, and effective policy without changing policy.
 
+## Diagnostics & Feedback (from Cascade)
+
+Open **Diagnostics & Feedback** in the left sidebar (or the Diagnostics shortcut in the top bar).
+
+1. Click **Start Recording**, reproduce the failure, then click **Stop**. The session recorder captures button IDs, page transitions, local HTTP status and timing; it does not collect typed values, file contents, AI prompts or credentials.
+2. Click **Mark Last Action Not Working** to prefill the affected feature, or complete the **Log an Error or Broken Feature** form yourself. Provide what happened, what you expected, and steps to reproduce.
+3. Click **Save Local Issue Report**. Each report gets a unique ID, stays in your user-local Issues folder, and can be marked resolved/reopened.
+4. Use **Refresh Logs** for sanitized backend errors correlated by request ID, or **Run Checks** for local readiness without contacting external services.
+5. Click **Download Support Bundle** to export an editable JSON report. Free-text issue notes are **excluded by default**; only select **Include descriptions** when you expressly want to include the words you typed. Review all exports before sharing.
+
+Automatic browser exceptions, rejected promises and unsuccessful local API requests are captured even if session recording is off. Full action recording is opt-in and memory-only. Support bundles are downloaded locally; nothing is uploaded or emailed. The source issue files live under:
+
+    %LOCALAPPDATA%\Bowerbird\Logs\Issues
+
+Server logs live under:
+
+    %LOCALAPPDATA%\Bowerbird\Logs
+
+If the GUI will not launch at all, run `Start-Bowerbird.bat diagnostics`. See [Diagnostics and feedback guide](docs/DIAGNOSTICS.md) for troubleshooting workflows.
+
 ## What is implemented
 
 | Area | Functionality |
@@ -79,7 +99,7 @@ Run Start-Bowerbird.bat diagnostics when the GUI doesn't start. It checks requir
 | Local Agents | Read-only organization, duplication, and index-quality analysis; usable without cloud AI |
 | AI Chat | Optional Arc/GenAI/Grok integration, streamed browser output when provider supports SSE; fallback JSON responses |
 | Code Insights | Language and line statistics by extension |
-| Tests | Windows PowerShell parser check, JavaScript/DOM contract tests, smoke and real localhost HTTP API tests on both transports |
+| Diagnostics & Feedback | Cascade-style session recorder, automatic browser/API errors, local issue reporting and resolution, request IDs, health checks, redacted support export |\n| Tests | Windows PowerShell parser check, JavaScript/DOM contract tests, smoke and real localhost HTTP API tests on both transports |
 
 ### Important implementation distinctions
 
