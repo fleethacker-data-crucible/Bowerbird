@@ -60,6 +60,14 @@ try{
    Assert ($html -match 'Local server connected') 'Browser JavaScript never populated connection status'
    Assert ($html -match 'BowerbirdGuiProbe\.txt') 'Browser JavaScript never populated the file explorer'
    Write-Host 'PASS: Edge executed GUI JavaScript and rendered file explorer' -ForegroundColor Green
+   if(Get-Command node -ErrorAction SilentlyContinue){
+    $alternate=Join-Path $temp 'AlternateForGui'
+    [IO.Directory]::CreateDirectory($alternate)|Out-Null
+    [IO.File]::WriteAllText((Join-Path $alternate 'BrowserSelected.txt'),'Selected from the actual GUI')
+    & node (Join-Path $repo 'Tests\GuiFolderSwitch.js') $session $alternate $edgeBinary[0]
+    if($LASTEXITCODE -ne 0){throw 'Real Edge GUI folder selector test failed'}
+   }else{Write-Host 'SKIP: Node is unavailable on CI; browser-only folder selector test omitted'}
+
   }else{Write-Host 'SKIP: Edge not present; launcher + HTTP integration checks passed' -ForegroundColor Yellow}
  }
  Write-Host 'PASS: Start-Bowerbird.bat launched Studio and served authenticated browser/API responses' -ForegroundColor Green
