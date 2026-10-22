@@ -131,6 +131,22 @@ async function main(){
  await evaluate("document.getElementById('diag-record-stop').click();true");
  assert.equal(await evaluate("document.getElementById('diag-stat-recording').textContent"),'Off');
  console.log('PASS: Edge Diagnostics tab recorded actions, saved a broken-feature report and updated its status');
+ // Simulate failure of the local issue endpoint while retaining the already loaded UI.
+ // The feedback form must still create a browser-only emergency download.
+ await evaluate("(()=>{window.__bowerbirdOriginalFetch=window.fetch;window.fetch=function(url,options){if(String(url).includes('/api/feedback/create'))return Promise.reject(new Error('Simulated local backend outage'));return window.__bowerbirdOriginalFetch(url,options)};return true})()");
+ const offlineTitle='Browser emergency error report';
+ await evaluate("(()=>{"+
+  "document.getElementById('diag-issue-title').value="+JSON.stringify(offlineTitle)+";"+
+  "document.getElementById('diag-issue-actual').value='Simulated backend failure during Save';"+
+  "document.getElementById('diag-issue-save').click();return true})()");
+ const emergency=await until(()=>evaluate(
+  "document.getElementById('diag-issues').textContent.includes("+JSON.stringify(offlineTitle)+") && "+
+  "document.getElementById('diag-issues').textContent.includes('download-only') && "+
+  "document.getElementById('diag-issue-result').textContent.includes('emergency JSON')"
+ ),'Offline emergency report created in the browser');
+ assert.equal(emergency,true);
+ await evaluate("(()=>{window.fetch=window.__bowerbirdOriginalFetch;delete window.__bowerbirdOriginalFetch;return true})()");
+ console.log('PASS: Diagnostics captured an emergency issue locally when the feedback backend was unreachable');
 }
 main().catch(err=>{console.error('FAIL: GUI folder selector: '+err.stack);process.exitCode=1}).finally(()=>{
  if(ws){try{ws.close()}catch{}}
