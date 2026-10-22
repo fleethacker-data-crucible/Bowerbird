@@ -10,15 +10,16 @@
  [switch]$NoBrowser,
  [switch]$AllowCloudAI,
  [ValidateSet('Auto','HttpListener','Tcp','CompiledTcp')][string]$Transport='Auto',
- [switch]$FixedPort
+ [switch]$FixedPort,
+ [switch]$LocalDev
 )
 $ErrorActionPreference='Stop'
 $script:AppRoot=$PSScriptRoot
 # Never write state to the downloaded/program installation directory, which may be read-only.
 $localData=[Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
 if(-not $localData){$localData=[IO.Path]::GetTempPath()}
-$script:DataRoot=Join-Path $localData 'Bowerbird\State'
-$script:LogDir=Join-Path $localData 'Bowerbird\Logs'
+$script:DataRoot=Join-Path $localData $(if($LocalDev){'Bowerbird\LocalDev\State'}else{'Bowerbird\State'})
+$script:LogDir=Join-Path $localData $(if($LocalDev){'Bowerbird\LocalDev\Logs'}else{'Bowerbird\Logs'})
 try{
  [IO.Directory]::CreateDirectory($script:DataRoot)|Out-Null
  [IO.Directory]::CreateDirectory($script:LogDir)|Out-Null
