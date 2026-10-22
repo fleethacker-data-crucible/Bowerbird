@@ -5,18 +5,66 @@
  No admin install required. Browser assets are static, served from Web/.
 #>
 [CmdletBinding()]param(
- [string]$Root=(Join-Path $env:USERPROFILE 'Pictures'),
- [ValidateRange(1025,65535)][int]$Port=8767,
+ [string]$Root='',
+ [ValidateRange(0,65535)][int]$Port=8767,
  [switch]$NoBrowser,
  [switch]$AllowCloudAI,
- [ValidateSet('Auto','HttpListener','Tcp')][string]$Transport='Auto'
+ [ValidateSet('Auto','HttpListener','Tcp','CompiledTcp')][string]$Transport='Auto',
+ [switch]$FixedPort
 )
 $ErrorActionPreference='Stop'
 $script:AppRoot=$PSScriptRoot
-$script:DataRoot=Join-Path $AppRoot 'Data'
-$script:AllowedRoot=[IO.Path]::GetFullPath((Resolve-Path -LiteralPath $Root).ProviderPath).TrimEnd('\','/')
-if(-not (Test-Path $script:AllowedRoot -PathType Container)){throw 'Root must be an existing directory'}
-if(-not (Test-Path $script:DataRoot)){New-Item -ItemType Directory -Path $script:DataRoot -Force|Out-Null}
+# Never write state to the downloaded/program installation directory, which may be read-only.
+$localData=[Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
+if(-not $localData){$localData=[IO.Path]::GetTempPath()}
+$script:DataRoot=Join-Path $localData 'Bowerbird\State'
+$script:LogDir=Join-Path $localData 'Bowerbird\Logs'
+try{
+ [IO.Directory]::CreateDirectory($script:DataRoot)|Out-Null
+ [IO.Directory]::CreateDirectory($script:LogDir)|Out-Null
+}catch{throw "Cannot initialize Bowerbird user data directory: $($_.Exception.Message)"}
+$script:LogFile=Join-Path $script:LogDir ('studio-'+(Get-Date -Format 'yyyyMMdd')+'.jsonl')
+function Write-BowerbirdDiagnostic {
+ [CmdletBinding()]param([string]$Level='INFO',[string]$Event,[string]$Message='',[string]$Route='')
+ try{
+  # No HTTP query strings, prompt text, credentials, or document content are logged.
+  $safe=([string]$Message -replace '(?i)(token|password|secret|api[_-]?key|bearer|authorization)\s*[:=]\s*\S+','$1=[REDACTED]')
+  $safe=$safe -replace '(?i)https?://[^\s]+','[URL REDACTED]'
+  if($safe.Length -gt 500){$safe=$safe.Substring(0,500)}
+  $line=[pscustomobject]@{
+   time=[DateTime]::UtcNow.ToString('o');level=$Level;event=$Event;route=$Route;message=$safe
+  }|ConvertTo-Json -Compress
+  [IO.File]::AppendAllText($script:LogFile,$line+[Environment]::NewLine,[Text.Encoding]::UTF8)
+ }catch{Write-Warning 'Unable to write Bowerbird diagnostics'}
+}
+trap {
+ $message=if($_.Exception){$_.Exception.Message}else{[string]$_}
+ Write-BowerbirdDiagnostic -Level ERROR -Event 'FATAL_STARTUP' -Message $message
+ Write-Host ('Bowerbird Studio failed: '+$message) -ForegroundColor Red
+ Write-Host ('Diagnostic log: '+$script:LogFile) -ForegroundColor Yellow
+ exit 1
+}
+# The Pictures folder is not guaranteed to exist on locked-down workstations.
+if([string]::IsNullOrWhiteSpace($Root)){
+ $candidates=New-Object Collections.Generic.List[string]
+ if($env:USERPROFILE){
+  $candidates.Add((Join-Path $env:USERPROFILE 'Pictures'))
+  $candidates.Add((Join-Path $env:USERPROFILE 'Documents'))
+  $candidates.Add($env:USERPROFILE)
+ }
+ $candidates.Add([Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile))
+ $candidates.Add((Get-Location).ProviderPath)
+ foreach($candidate in $candidates){
+  if($candidate -and (Test-Path -LiteralPath $candidate -PathType Container)){$Root=$candidate;break}
+ }
+}
+if(-not $Root -or -not (Test-Path -LiteralPath $Root -PathType Container)){
+ throw "Workspace folder does not exist: $Root . Supply -Root with an existing authorized folder."
+}
+$rootFull=[IO.Path]::GetFullPath((Resolve-Path -LiteralPath $Root).ProviderPath)
+$volumeRoot=[IO.Path]::GetPathRoot($rootFull)
+$script:AllowedRoot=if($rootFull.Length -gt $volumeRoot.Length){$rootFull.TrimEnd([char]92,[char]47)}else{$rootFull}
+Write-BowerbirdDiagnostic -Event 'BOOT' -Message 'Starting Bowerbird Studio.'
 . (Join-Path $AppRoot 'Private\BowerbirdIntelligence.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdAdvanced.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdStreaming.ps1')
@@ -28,6 +76,7 @@ if(-not (Test-Path $script:DataRoot)){New-Item -ItemType Directory -Path $script
 . (Join-Path $AppRoot 'Private\BowerbirdActions.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdLlm.ps1')
 . (Join-Path $AppRoot 'Private\ArcBridge.ps1')
+. (Join-Path $AppRoot 'Private\BowerbirdLoopback.ps1')
 $script:IndexPath=Join-Path $DataRoot 'studio-index.json'
 $script:JournalPath=Join-Path $DataRoot 'studio-journal.json'
 $script:PlanPath=Join-Path $DataRoot 'studio-plan.json'
@@ -36,26 +85,41 @@ $rng=[Security.Cryptography.RandomNumberGenerator]::Create()
 try{$rng.GetBytes($tokenBytes)}finally{$rng.Dispose()}
 $script:Token=[Convert]::ToBase64String($tokenBytes).TrimEnd('=').Replace('+','-').Replace('/','_')
 $script:Session=$null
-if($Transport -ne 'Tcp'){
+$script:PureTcp=$false
+$script:PortRequested=$Port
+if($Transport -in @('Auto','Tcp')){
+ # Default to ARC/Cascade-style pure PowerShell sockets. Never compile C# or
+ # request an HTTP.sys URL reservation on the normal startup path.
+ $binding=Start-BowerbirdLoopback -Port $Port -FixedPort:$FixedPort
+ $script:Session=$binding.Listener
+ $script:PureTcp=$true
+ $Port=[int]$binding.Port
+}elseif($Transport -eq 'HttpListener'){
+ if($Port -eq 0){
+  $probe=Start-BowerbirdLoopback -Port 0
+  $Port=$probe.Port
+  $probe.Listener.Stop()
+ }
  $http=New-Object Net.HttpListener
  $http.Prefixes.Add("http://127.0.0.1:$Port/")
- try{$http.Start();$script:Session=$http}
- catch{
-  try{$http.Close()}catch{}
-  if($Transport -eq 'HttpListener'){throw}
-  Write-Warning 'HTTP.sys listener unavailable. Trying the loopback-only TCP transport (no elevation). Confirm local socket use is authorized.'
+ $http.Start()
+ $script:Session=$http
+}else{
+ if($Port -eq 0){
+  $probe=Start-BowerbirdLoopback -Port 0
+  $Port=$probe.Port
+  $probe.Listener.Stop()
  }
-}
-if(-not $script:Session){
  Add-Type -Path (Join-Path $script:AppRoot 'Private\BowerbirdTcpBridge.cs') -ErrorAction Stop
  $script:Session=New-Object Bowerbird.Transport.Server($Port)
  $script:Session.Start()
 }
+Write-BowerbirdDiagnostic -Event 'BOUND' -Message ("Transport=$Transport Port=$Port")
 function Resolve-WorkspacePath([string]$Relative){
  if([string]::IsNullOrWhiteSpace($Relative) -or $Relative -eq '.'){return $script:AllowedRoot}
  if([IO.Path]::IsPathRooted($Relative)){throw 'Absolute paths are not accepted'}
  $candidate=[IO.Path]::GetFullPath((Join-Path $script:AllowedRoot $Relative))
- $prefix=$script:AllowedRoot+[IO.Path]::DirectorySeparatorChar
+ $prefix=if($script:AllowedRoot.EndsWith([string][IO.Path]::DirectorySeparatorChar)){$script:AllowedRoot}else{$script:AllowedRoot+[IO.Path]::DirectorySeparatorChar}
  if($candidate -ine $script:AllowedRoot -and -not $candidate.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)){throw 'Path outside workspace'}
  # Avoid junction/reparse-point traversal through user-provided relative paths.
  $part=$script:AllowedRoot
@@ -72,7 +136,7 @@ function Resolve-WorkspacePath([string]$Relative){
 }
 function Assert-WorkspaceAbsolute([string]$Full){
  $candidate=[IO.Path]::GetFullPath($Full)
- $prefix=$script:AllowedRoot+[IO.Path]::DirectorySeparatorChar
+ $prefix=if($script:AllowedRoot.EndsWith([string][IO.Path]::DirectorySeparatorChar)){$script:AllowedRoot}else{$script:AllowedRoot+[IO.Path]::DirectorySeparatorChar}
  if($candidate -ine $script:AllowedRoot -and -not $candidate.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)){throw 'Operation references a file outside workspace'}
  $relative=if($candidate -ieq $script:AllowedRoot){'.'}else{$candidate.Substring($script:AllowedRoot.Length+1)}
  $null=Resolve-WorkspacePath $relative
@@ -121,7 +185,7 @@ function Safe-Preview([string]$Relative){
 }
 function Invoke-Api([string]$Route,$Body){
  switch($Route){
-  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;indexExists=(Test-Path $script:IndexPath);cloudAI=[bool]$AllowCloudAI;version='2.0';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional','rename')}}
+  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;port=$Port;transport=$script:Session.GetType().Name;indexExists=(Test-Path $script:IndexPath);cloudAI=[bool]$AllowCloudAI;version='2.1';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional','rename')}}
   '/api/files' {return Get-Files -Relative ([string]$Body.path) -Limit 500}
   '/api/preview' {return Safe-Preview ([string]$Body.path)}
   '/api/index' {
@@ -258,13 +322,22 @@ function Get-BowerbirdMessages($Body){
 $url="http://127.0.0.1:$Port/"
 Write-Host "Bowerbird Studio running at $url" -ForegroundColor Cyan
 Write-Host "Workspace: $script:AllowedRoot"
+if($script:PortRequested -ne $Port){Write-Host "Port $($script:PortRequested) was busy; selected free localhost port $Port instead." -ForegroundColor Yellow}
 Write-Host "Transport: $($script:Session.GetType().Name)"
 Write-Host ('Session URL: '+$url+'?token='+[uri]::EscapeDataString($script:Token)) -ForegroundColor DarkGray
+Write-Host ('Diagnostic log: '+$script:LogFile)
 Write-Host 'Press Ctrl+C to stop.'
-if(-not $NoBrowser){Start-Process ($url+'?token='+[uri]::EscapeDataString($script:Token))}
+if(-not $NoBrowser){
+ try{Start-Process ($url+'?token='+[uri]::EscapeDataString($script:Token)) -ErrorAction Stop}
+ catch{
+  Write-BowerbirdDiagnostic -Level WARN -Event 'BROWSER_LAUNCH' -Message $_.Exception.Message
+  Write-Warning 'Browser did not open automatically. Copy the Session URL printed above into your browser.'
+ }
+}
 try{
- while($script:Session.IsListening){
-  $ctx=$script:Session.GetContext();$req=$ctx.Request;$res=$ctx.Response
+ while($true){
+  $ctx=if($script:PureTcp){Read-BowerbirdLoopbackContext -Listener $script:Session -Port $Port}else{$script:Session.GetContext()}
+  $req=$ctx.Request;$res=$ctx.Response
   try{
    $res.Headers.Add('X-Content-Type-Options','nosniff')
    $res.Headers.Add('Referrer-Policy','no-referrer')
@@ -293,7 +366,17 @@ try{
      else{$data=Invoke-Api $req.Url.AbsolutePath $body;Send-Json $res $data}
     }
    }else{Send-Json $res @{error='Not found'} 404}
-  }catch{try{Send-Json $res @{error=$_.Exception.Message} 400}catch{};Write-Warning $_.Exception.Message}
-  finally{try{$res.Close()}catch{}}
+  }catch{
+   $msg=$_.Exception.Message
+   Write-BowerbirdDiagnostic -Level ERROR -Event 'HTTP_ERROR' -Route $req.Url.AbsolutePath -Message $msg
+   try{Send-Json $res @{error=$msg} 400}catch{}
+  }finally{
+   try{Write-BowerbirdDiagnostic -Event 'REQUEST' -Route $req.Url.AbsolutePath -Message ([string]$res.StatusCode)}catch{}
+   try{$res.Close()}catch{}
+  }
  }
-}finally{$script:Session.Stop();$script:Session.Close()}
+}finally{
+ try{$script:Session.Stop()}catch{}
+ try{$script:Session.Close()}catch{}
+ Write-BowerbirdDiagnostic -Event 'STOP' -Message 'Service stopped'
+}
