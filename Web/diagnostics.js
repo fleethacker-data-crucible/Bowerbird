@@ -6,7 +6,7 @@
  'use strict';
  const $=id=>document.getElementById(id);
  const recorder={
-  active:false,id:'',started:null,events:[],countErrors:0,issues:[],
+  active:false,id:'',started:null,events:[],countErrors:0,issues:[],offlineIssues:[],
   lastAction:'',lastRequestId:'',token:'',serverEvents:[],requestStats:[],
   activated:false,latestBundle:null
  };
@@ -168,7 +168,7 @@
  }
  async function refreshIssues(){
   const data=await call('feedback/list',{});
-  recorder.issues=Array.isArray(data.issues)?data.issues:[];
+  recorder.issues=[...(Array.isArray(data.issues)?data.issues:[]),...recorder.offlineIssues];
   updateCounters();renderIssues();
   return recorder.issues;
  }
@@ -199,7 +199,8 @@
     card.append(detail);view.textContent='Hide Details';
    });
    const resolve=document.createElement('button');resolve.type='button';resolve.className='ghost';
-   resolve.textContent=issue.status==='resolved'?'Reopen':'Mark Resolved';
+   resolve.textContent=issue.status==='download-only'?'Downloaded Only':issue.status==='resolved'?'Reopen':'Mark Resolved';
+   if(issue.status==='download-only')resolve.disabled=true;
    resolve.addEventListener('click',async()=>{
     resolve.disabled=true;
     try{await call('feedback/status',{id:issue.id,status:issue.status==='resolved'?'open':'resolved'});
@@ -260,14 +261,30 @@
    events:recorder.events};
  }
  async function buildSupport(includeNotes){
-  const server=await call('diagnostics/support',{includeNotes});
+  let server;let fallback=false;
+  try{server=await call('diagnostics/support',{includeNotes})}
+  catch(_){
+   fallback=true;
+   server={
+    schemaVersion:2,generatedUtc:now(),environment:{product:'Bowerbird Studio',version:'2.3'},
+    privacyNotice:'Browser-only emergency bundle. The backend could not be reached.',
+    serverEvents:recorder.serverEvents,issues:[],offline:true
+   };
+  }
+  const unsaved=recorder.offlineIssues.map(issue=>includeNotes?issue:{
+   id:issue.id,createdUtc:issue.createdUtc,status:issue.status,
+   kind:issue.kind,severity:issue.severity,feature:issue.feature,lastAction:issue.lastAction,
+   requestId:issue.requestId
+  });
   const payload={
-   ...server,clientSession:sessionData(),lastKnownRequestId:recorder.lastRequestId||'',
+   ...server,offlineIssues:unsaved,clientSession:sessionData(),
+   lastKnownRequestId:recorder.lastRequestId||'',
    exportDisclaimer:'Review this file before sharing. Manually entered notes may include sensitive information.'
   };
   recorder.latestBundle=payload;
   const json=JSON.stringify(payload,null,2);
   $('diag-support-preview').textContent=json.slice(0,13000)+(json.length>13000?'\n\n[PREVIEW TRUNCATED — download includes the remainder]':'');
+  if(fallback)showFeedback('Backend is offline: the package contains browser events, cached sanitized server logs and unsaved issue metadata only.',true);
   return json;
  }
  async function copy(text){
@@ -300,21 +317,36 @@
   $('diag-issue-reset').addEventListener('click',()=>{$('diag-issue-form').reset();showFeedback('Report form cleared.')});
   $('diag-issue-form').addEventListener('submit',async event=>{
    event.preventDefault();const save=$('diag-issue-save');save.disabled=true;
+   const payload={
+    kind:$('diag-issue-kind').value,severity:$('diag-issue-severity').value,
+    feature:$('diag-issue-feature').value,title:$('diag-issue-title').value,
+    actual:$('diag-issue-actual').value,expected:$('diag-issue-expected').value,
+    steps:$('diag-issue-steps').value,
+    lastAction:$('diag-issue-last').checked?recorder.lastAction:'',
+    requestId:$('diag-issue-last').checked?recorder.lastRequestId:''
+   };
    try{
-    const payload={
-     kind:$('diag-issue-kind').value,severity:$('diag-issue-severity').value,
-     feature:$('diag-issue-feature').value,title:$('diag-issue-title').value,
-     actual:$('diag-issue-actual').value,expected:$('diag-issue-expected').value,
-     steps:$('diag-issue-steps').value,
-     lastAction:$('diag-issue-last').checked?recorder.lastAction:'',
-     requestId:$('diag-issue-last').checked?recorder.lastRequestId:''
-    };
     const issue=await call('feedback/create',payload);
     await refreshIssues();
     showFeedback('Saved locally · Issue '+issue.id.slice(0,12)+'. Export a support bundle to share a report.');
     $('diag-issue-form').reset();
-   }catch(err){showFeedback('Could not save report: '+err.message,true)}
-   finally{save.disabled=false}
+   }catch(err){
+    // Preserve the operator's explicit report even if the local engine crashes.
+    const issue={
+     schemaVersion:1,id:'offline-'+short(),createdUtc:now(),
+     status:'download-only',...payload
+    };
+    recorder.offlineIssues.unshift(issue);
+    recorder.issues.unshift(issue);updateCounters();renderIssues();
+    try{
+     const emergency={...issue,recordedSession:sessionData(),
+      notice:'Backend save failed; keep this file locally. Nothing was uploaded.'};
+     download('bowerbird-emergency-issue-'+short()+'.json',JSON.stringify(emergency,null,2));
+     showFeedback('The local backend could not save this report: '+safeMessage(err.message)+'. An emergency JSON download was requested; check Downloads and review before sharing.',true);
+    }catch(downloadError){
+     showFeedback('The backend is unavailable and automatic downloading failed. Select and copy your report text before closing the browser.',true);
+    }
+   }finally{save.disabled=false}
   });
   $('diag-support-export').addEventListener('click',async()=>{
    const includeNotes=$('diag-export-notes').checked;
