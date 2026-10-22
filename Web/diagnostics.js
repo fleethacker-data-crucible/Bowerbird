@@ -61,7 +61,7 @@
    if(monitored){
     const status=response.status;
     const requestId=response.headers.get('X-Bowerbird-Request-ID')||'';
-    if(/^[a-f0-9]{12}$/.test(requestId))recorder.lastRequestId=requestId;
+    if(!response.ok&&/^[a-f0-9]{12}$/.test(requestId))recorder.lastRequestId=requestId;
     if(!response.ok||recorder.active)emit(
      response.ok?'API_OK':'API_ERROR',
      {route:pathname.replace('/api/',''),status,elapsedMs:Date.now()-started,requestId},
