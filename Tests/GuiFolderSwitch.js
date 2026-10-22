@@ -89,6 +89,48 @@ async function main(){
  assert.match(state.notice,/Scan folder changed/i);
  assert.match(state.scan,/Not indexed/i);
  console.log('PASS: Edge GUI Use This Folder button switched workspace and refreshed Explorer');
+ // Exercise diagnostics navigation, recording, reporting and issue status.
+ assert.equal(await evaluate("(()=>{const tab=document.querySelector('[data-view=diagnostics]');if(!tab)throw Error('Diagnostics tab missing');tab.click();return true})()"),true);
+ const diagReady=await until(()=>evaluate(
+  "document.getElementById('view-diagnostics').classList.contains('active') && document.getElementById('diag-health').textContent.includes('Local backend')"
+ ),'Diagnostics tab and local health checks initialized');
+ assert.equal(diagReady,true);
+ await evaluate("document.getElementById('diag-record-start').click();true");
+ await evaluate("document.querySelector('[data-view=files]').click();true");
+ await evaluate("document.getElementById('refresh').click();true");
+ await until(()=>evaluate("document.getElementById('file-table').textContent.includes('BrowserSelected.txt')"),'Explorer reloaded while recording');
+ await evaluate("document.querySelector('[data-view=diagnostics]').click();true");
+ const recorded=await until(()=>evaluate(
+  "Number(document.getElementById('diag-stat-events').textContent)>2 && document.getElementById('diag-stat-recording').textContent==='On'"
+ ),'Diagnostics recorded actions and API outcomes');
+ assert.equal(recorded,true);
+ const issueTitle='GUI browser test broken-feature report';
+ const submitted=await evaluate("(()=>{"+
+  "document.getElementById('diag-issue-kind').value='not-working';"+
+  "document.getElementById('diag-issue-severity').value='high';"+
+  "document.getElementById('diag-issue-feature').value='explorer';"+
+  "document.getElementById('diag-issue-title').value="+JSON.stringify(issueTitle)+";"+
+  "document.getElementById('diag-issue-actual').value='Refresh did not work in the test scenario.';"+
+  "document.getElementById('diag-issue-expected').value='The explorer refreshes.';"+
+  "document.getElementById('diag-issue-save').click();return true})()");
+ assert.equal(submitted,true);
+ const saved=await until(()=>evaluate(
+  "document.getElementById('diag-issues').textContent.includes("+JSON.stringify(issueTitle)+") && document.getElementById('diag-issue-result').textContent.includes('Saved locally')"
+ ),'Broken feature issue saved locally in the GUI');
+ assert.equal(saved,true);
+ await evaluate("(()=>{"+
+  "const cards=[...document.querySelectorAll('#diag-issues .diag-issue-card')];"+
+  "const card=cards.find(c=>c.textContent.includes("+JSON.stringify(issueTitle)+"));"+
+  "if(!card)throw Error('Saved report missing');"+
+  "const resolved=[...card.querySelectorAll('button')].find(b=>b.textContent==='Mark Resolved');"+
+  "if(!resolved)throw Error('Resolve action missing');resolved.click();return true})()");
+ const resolved=await until(()=>evaluate(
+  "(()=>{const card=[...document.querySelectorAll('#diag-issues .diag-issue-card')].find(c=>c.textContent.includes("+JSON.stringify(issueTitle)+"));return card&&card.querySelector('.diag-issue-status')?.textContent==='resolved'})()"
+ ),'Mark Resolved updated saved issue');
+ assert.equal(resolved,true);
+ await evaluate("document.getElementById('diag-record-stop').click();true");
+ assert.equal(await evaluate("document.getElementById('diag-stat-recording').textContent"),'Off');
+ console.log('PASS: Edge Diagnostics tab recorded actions, saved a broken-feature report and updated its status');
 }
 main().catch(err=>{console.error('FAIL: GUI folder selector: '+err.stack);process.exitCode=1}).finally(()=>{
  if(ws){try{ws.close()}catch{}}
