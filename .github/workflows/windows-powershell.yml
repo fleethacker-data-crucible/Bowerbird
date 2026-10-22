@@ -38,6 +38,9 @@ jobs:
             node Tests/UiContract.js
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
+      - name: Launch environment diagnostics
+        shell: powershell
+        run: .\Tests\Diagnose-Startup.ps1
       - name: Intelligence engine smoke test
         shell: powershell
         run: .\Tests\Smoke.ps1
@@ -47,3 +50,9 @@ jobs:
       - name: Studio loopback TCP integration
         shell: powershell
         run: .\Tests\StudioIntegration.ps1 -Transport Tcp
+      - name: Dynamic port collision recovery
+        shell: powershell
+        run: .\Tests\StudioIntegration.ps1 -Transport Tcp -SimulateCollision
+      - name: Real GUI BAT launcher and Edge rendering
+        shell: powershell
+        run: .\Tests\BrowserLaunch.ps1
