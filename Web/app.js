@@ -1,7 +1,20 @@
 'use strict';
-const state={path:'.',token:new URLSearchParams(location.search).get('token')||sessionStorage.getItem('bowerbird-token'),status:null,plan:null,renamePlan:null,selectedFile:null,previewUrl:null};
-if(state.token){sessionStorage.setItem('bowerbird-token',state.token);if(location.search)history.replaceState({},'',location.pathname)}
+let storedToken=null;
+try{storedToken=sessionStorage.getItem('bowerbird-token')}catch(_){/* Managed browsers may disable session storage. */}
+const launchToken=new URLSearchParams(location.search).get('token');
+const state={path:'.',token:launchToken||storedToken,status:null,plan:null,renamePlan:null,selectedFile:null,previewUrl:null};
+if(state.token){
+ try{sessionStorage.setItem('bowerbird-token',state.token);if(location.search)history.replaceState({},'',location.pathname)}catch(_){/* Keep the token in the URL when storage is unavailable. */}
+}
 const $=id=>document.getElementById(id);
+function record(event,target){
+ if(!state.token)return;
+ const value=String(target||'unknown').replace(/[^a-zA-Z0-9_.:-]/g,'_').slice(0,80)||'unknown';
+ fetch('/api/client-event',{method:'POST',headers:{'Content-Type':'application/json','X-Bowerbird-Token':state.token},body:JSON.stringify({event,target:value}),cache:'no-store'}).catch(()=>{});
+}
+window.addEventListener('error',e=>{record('CLIENT_ERROR','script_'+(e.filename||'browser').split('/').pop());const n=$('notice');if(n){n.textContent='A browser script error occurred. Open Diagnostics to review the local report.';n.className='error'}});
+window.addEventListener('unhandledrejection',()=>{record('CLIENT_ERROR','unhandled_promise');const n=$('notice');if(n){n.textContent='A browser request failed. Open Diagnostics for details.';n.className='error'}});
+document.addEventListener('click',e=>{const target=e.target&&e.target.closest?e.target.closest('button'):null;if(target){record('CLICK',target.id||target.dataset.view||'button')}},true);
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=String(text);return n}
 function clear(n){n.replaceChildren()}
 function notify(message,error=false){const n=$('notice');n.textContent=message;n.className=error?'error':''}
@@ -9,7 +22,7 @@ async function api(route,body={}){
  if(!state.token)throw Error('Missing session token. Launch the browser from the PowerShell Studio process.');
  const response=await fetch('/api/'+route,{method:'POST',headers:{'Content-Type':'application/json','X-Bowerbird-Token':state.token},body:JSON.stringify(body),cache:'no-store'});
  let data;try{data=await response.json()}catch{throw Error('Server returned an invalid response')}
- if(!response.ok)throw Error(data.error||'Request failed');
+ if(!response.ok){if(route!=='client-event')record('API_ERROR',route);throw Error(data.error||'Request failed')}
  return data
 }
 async function run(action,done){try{notify('Working…');const result=await action();notify(done||'Done');return result}catch(err){notify(err.message,true);return null}}
@@ -163,4 +176,30 @@ async function streamAi(payload,onText){
  }finally{reader.releaseLock()}
 }
 
-loadStatus().then(loadFiles);
+let reportText='';
+async function refreshDiagnostics(){
+ const report=await run(()=>api('diagnostics'),'Diagnostic report loaded');
+ if(!report)return;
+ const events=(report.events||[]).map(x=>[x.time,x.level,x.event,x.route||'',x.message||''].join(' | ')).join('\n');
+ reportText=['Bowerbird Studio '+report.version,'Transport: '+report.transport,'Port: '+report.port,'Local log: '+report.logPath,'',events].join('\n');
+ $('diagnostics-report').textContent=reportText;
+}
+$('diagnostics').addEventListener('click',()=>{
+ const panel=$('diagnostics-panel');panel.hidden=!panel.hidden;
+ if(!panel.hidden)refreshDiagnostics();
+});
+$('refresh-diagnostics').addEventListener('click',refreshDiagnostics);
+$('copy-diagnostics').addEventListener('click',async()=>{
+ if(!reportText){notify('Load diagnostics first.',true);return}
+ try{
+  if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(reportText)}
+  else{
+   const field=document.createElement('textarea');field.value=reportText;
+   field.style.position='fixed';field.style.left='-9999px';document.body.append(field);field.select();
+   if(!document.execCommand('copy'))throw Error('Clipboard unavailable');
+   field.remove();
+  }
+  notify('Diagnostic report copied. Review it before sharing.')
+ }catch(err){notify('Unable to copy automatically: '+err.message,true)}
+});
+loadStatus().then(()=>{record('READY','browser_ui');return loadFiles()}).catch(err=>notify('Initialization failed: '+err.message,true));
