@@ -28,6 +28,19 @@ To start the server without opening a browser:
 
 Copy the Session URL from PowerShell into your browser. It contains a private ephemeral token; don't share it in logs or screenshots. If automatic browser opening is blocked, the backend remains available and prints the manual session URL.
 
+### Change the scan folder inside the GUI
+
+You no longer have to restart PowerShell or use the command line to select a new folder:
+
+1. Open **Start-Bowerbird.bat** and stay in the **Explorer** screen.
+2. In **Folder to scan** at the top, click **Browse Folder…** and select a directory using the native Windows picker.
+3. If the native picker is unavailable on the workstation, paste a full path into the same field and click **Use This Folder**.
+4. The Explorer immediately switches to that directory. Click **Build Index** to scan it and optionally include its subfolders.
+
+Selecting a folder is **not the same as scanning it**: an index is built only when the user explicitly clicks **Build Index**. Changing folders clears the current browser preview and pending move approval. Indexed contents and undo journals are stored separately per workspace in the user-local Bowerbird State folder, so results from different folders do not mix. You can return to a previously indexed folder; its index may still be available, but pending move plans must be regenerated.
+
+The native picker uses the built-in Windows Forms folder dialog from the current interactive PowerShell session. If it is blocked by workplace restrictions or appears behind the browser, use the path-entry fallback. Browser upload controls cannot expose full local paths to a server for security reasons.
+
 ### Ports and workstation compatibility
 
 Normal startup uses **pure Windows PowerShell 5.1 with .NET TcpListener on 127.0.0.1**. No C# compilation, HTTP.sys URL reservation, administrator privileges, Node, Python, or external web-server installation is required. It prefers local port **8767**, and when another app owns that port, binds an available OS-assigned port and prints/opens the actual URL. This follows ARC's auto-port approach.
@@ -42,9 +55,9 @@ Startup failures remain visible in the BAT window. The browser has a **Diagnosti
 
     %LOCALAPPDATA%\Bowerbird\Logs
 
-Indices, journals and plans live under:
+Indexes, journals and pending plans are now isolated by folder under:
 
-    %LOCALAPPDATA%\Bowerbird\State
+    %LOCALAPPDATA%\Bowerbird\State\workspaces
 
 Those paths avoid writing to a possibly read-only installation folder. Logs omit request bodies, image contents, credentials and token query strings. Review diagnostics before sharing.
 
@@ -54,7 +67,7 @@ Run Start-Bowerbird.bat diagnostics when the GUI doesn't start. It checks requir
 
 | Area | Functionality |
 | --- | --- |
-| Explorer | Folder navigation, metadata, text preview, local image preview and browser PDF viewer |
+| Explorer | Native GUI folder selection, manual full-path selection, folder navigation, metadata and safe previews |
 | Smart Rename | Screenshot/image analysis using metadata and filename patterns, optional AI vision, preview, consented apply, undo |
 | Smart Index | SHA-256, image dHash, categories, metadata, optional full-text and optional OCR |
 | Search | BM25-inspired token scoring with cached per-document frequencies, file name boost |
@@ -102,7 +115,7 @@ powershell.exe -NoProfile -File .\Tests\Smoke.ps1
 powershell.exe -NoProfile -File .\Tests\StudioIntegration.ps1
 ```
 
-GitHub Actions checks PowerShell and JS/DOM syntax, startup prerequisites, both HTTP transports, port collisions, the real GUI BAT launcher, and Edge rendering when available. Windows-hosted CI cannot establish behavior under every managed workstation policy. The Studio integration test exercises authentication, indexing, search, duplicate discovery, related files, local agents, planning, apply, undo and path rejection without any AI token.
+GitHub Actions checks PowerShell and JS/DOM syntax, startup prerequisites, both HTTP transports, port collisions, the real GUI BAT launcher, and Edge rendering when available. Windows-hosted CI cannot establish behavior under every managed workstation policy. The Studio integration test exercises authentication, changing the scan folder, per-folder index isolation, stale plan invalidation, indexing, search, duplicate discovery, local agents, planning, apply, undo and path rejection without any AI token.
 
 ## Privacy, safety and operations
 
