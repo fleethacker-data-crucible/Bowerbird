@@ -42,11 +42,21 @@ try{
    $dump=Join-Path $temp 'edge-dom.txt'
    $edgeErr=Join-Path $temp 'edge-errors.txt'
    $profile=Join-Path $temp 'edge-profile'
-   $flags=@('--headless=new','--disable-gpu','--disable-extensions','--disable-background-networking','--no-first-run','--no-default-browser-check',('--user-data-dir="'+$profile+'"'),'--dump-dom',('"'+$session+'"'))
+   $flags=@('--headless=new','--disable-gpu','--disable-extensions','--disable-background-networking','--no-first-run','--no-default-browser-check','--virtual-time-budget=6500',('--user-data-dir="'+$profile+'"'),'--dump-dom',('"'+$session+'"'))
    $edge=Start-Process -FilePath $edgeBinary[0] -ArgumentList $flags -RedirectStandardOutput $dump -RedirectStandardError $edgeErr -PassThru
    for($n=0;$n -lt 100 -and -not $edge.HasExited;$n++){Start-Sleep -Milliseconds 250}
    if(-not $edge.HasExited){try{Stop-Process -Id $edge.Id -Force}catch{};throw 'Edge headless DOM rendering timed out'}
    $html=if(Test-Path -LiteralPath $dump){Get-Content -LiteralPath $dump -Raw}else{''}
+   if($html -notmatch 'Local server connected' -or $html -notmatch 'BowerbirdGuiProbe\.txt'){
+    foreach($name in @('notice','file-table','connection')){
+     $at=$html.IndexOf('id="'+$name+'"')
+     if($at -ge 0){Write-Host ("DOM "+$name+": "+$html.Substring([Math]::Max(0,$at-110),[Math]::Min(550,$html.Length-[Math]::Max(0,$at-110))))}
+    }
+    $diagnostic=Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'Bowerbird\Logs'
+    $latest=Get-ChildItem -LiteralPath $diagnostic -Filter 'studio-*.jsonl' -ErrorAction SilentlyContinue|Sort-Object LastWriteTime -Descending|Select-Object -First 1
+    if($latest){Write-Host 'Recent local request events:';Get-Content -LiteralPath $latest.FullName -Tail 14|ForEach-Object {Write-Host $_}}
+    if(Test-Path $edgeErr){Write-Host ((Get-Content $edgeErr -Tail 8) -join [Environment]::NewLine)}
+   }
    Assert ($html -match 'Local server connected') 'Browser JavaScript never populated connection status'
    Assert ($html -match 'BowerbirdGuiProbe\.txt') 'Browser JavaScript never populated the file explorer'
    Write-Host 'PASS: Edge executed GUI JavaScript and rendered file explorer' -ForegroundColor Green
