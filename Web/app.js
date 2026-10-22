@@ -29,7 +29,62 @@ async function run(action,done){try{notify('Working…');const result=await acti
 function size(bytes){if(bytes===null||bytes===undefined)return '—';if(bytes<1024)return bytes+' B';if(bytes<1048576)return (bytes/1024).toFixed(1)+' KB';return (bytes/1048576).toFixed(1)+' MB'}
 function show(view){document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b.dataset.view===view));document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.id==='view-'+view));$('page-title').textContent=({files:'File Explorer',search:'Intelligent Search',insights:'Insights & Agents',duplicates:'Duplicate Detection',organize:'File Organization',rename:'Smart Rename',code:'Code Insights',assistant:'AI Assistant'})[view];if(view==='files')loadFiles();if(view==='insights')loadInsights()}
 document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
-async function loadStatus(){const s=await run(()=>api('status'));if(!s)return;state.status=s;$('connection').textContent='Local server connected';$('workspace').textContent=s.root;$('index-state').textContent=s.indexExists?'Index available':'Not indexed';$('ai-state').textContent=s.cloudAI?'Enabled':'Offline';$('ai-hint').textContent=s.cloudAI?'Streaming connection to configured provider':'Offline assistance · use -AllowCloudAI for approved provider';if(s.indexExists)loadInsights()}
+async function loadStatus(){const s=await run(()=>api('status'));if(!s)return;state.status=s;$('connection').textContent='Local server connected';$('workspace').textContent=s.root;$('workspace-current').textContent=s.root;$('workspace-path').value=s.root;$('index-state').textContent=s.indexExists?'Index available':'Not indexed';$('ai-state').textContent=s.cloudAI?'Enabled':'Offline';$('ai-hint').textContent=s.cloudAI?'Streaming connection to configured provider':'Offline assistance · use -AllowCloudAI for approved provider';if(s.indexExists)loadInsights()}
+function resetForWorkspaceSwitch(){
+ state.path='.';
+ state.plan=null;state.renamePlan=null;state.selectedFile=null;
+ $('apply').disabled=true;$('rename-apply').disabled=true;$('related').disabled=true;
+ $('cwd').textContent='.';$('file-count').textContent='—';$('index-state').textContent='Not indexed';$('size-state').textContent='—';
+ $('preview-name').textContent='Select a file';$('preview-text').textContent='No file selected';
+ if(state.previewUrl){URL.revokeObjectURL(state.previewUrl);state.previewUrl=null}
+ clear($('media-preview'));clear($('file-table'));
+ const placeholders={
+  'search-results':'Build an index, then search this folder.',
+  'duplicate-results':'No duplicate scan for this folder yet.',
+  'plan-results':'No proposed moves. Generate a plan for the selected folder.',
+  'rename-results':'No rename proposals for this folder yet.',
+  'related-results':'','code-results':'Run an analysis for this folder.',
+  'agent-results':'Run an agent after indexing this folder.',
+  'category-results':'Build an index to view folder insights.'
+ };
+ for(const [id,label] of Object.entries(placeholders))$(id).textContent=label;
+ for(const id of ['insight-files','insight-size','insight-dupes','insight-errors'])$(id).textContent='—';
+}
+let workspaceRequestRunning=false;
+async function switchWorkspace(pathOrNull){
+ if(workspaceRequestRunning)return;
+ const buttons=[$('browse-folder'),$('change-folder')];
+ workspaceRequestRunning=true;
+ buttons.forEach(b=>b.disabled=true);
+ const nativePicker=pathOrNull===null;
+ try{
+  notify(nativePicker?'Opening Windows folder picker…':'Changing scan folder…');
+  const result=await api(nativePicker?'workspace/browse':'workspace/select',nativePicker?{}:{path:pathOrNull});
+  if(result.cancelled){notify('Folder selection cancelled. No changes made.');return}
+  if(!result.changed){
+   $('workspace-path').value=result.root;
+   notify('This folder is already selected.');return
+  }
+  resetForWorkspaceSwitch();
+  await loadStatus();
+  // Selecting a folder only changes the workspace; scanning is still explicit.
+  show('files');
+  notify('Scan folder changed. Click Build Index when you are ready to scan this folder.');
+ }catch(err){
+  notify(err.message,true);
+  // Keep the user-entered path so it can be corrected without typing it twice.
+ }finally{
+  buttons.forEach(b=>b.disabled=false);
+  workspaceRequestRunning=false;
+ }
+}
+$('workspace-form').addEventListener('submit',e=>{
+ e.preventDefault();
+ const path=$('workspace-path').value.trim();
+ if(!path){notify('Select or enter an existing folder path.',true);return}
+ switchWorkspace(path);
+});
+$('browse-folder').addEventListener('click',()=>switchWorkspace(null));
 async function loadFiles(){
  const data=await run(()=>api('files',{path:state.path}));if(!data)return;
  $('cwd').textContent=data.path;$('file-count').textContent=data.items.length;const tbody=$('file-table');clear(tbody);
