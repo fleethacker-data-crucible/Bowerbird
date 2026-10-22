@@ -91,7 +91,7 @@ async function loadFiles(){
  $('cwd').textContent=data.path;$('file-count').textContent=data.items.length;const tbody=$('file-table');clear(tbody);
  for(const item of data.items){
   const tr=el('tr');const td=el('td','name-cell',(item.directory?'▣  ':'▤  ')+item.name);if(item.directory)td.classList.add('folder');tr.append(td,el('td','',item.directory?'Folder':item.extension||'File'),el('td','',size(item.size)),el('td','',new Date(item.modified).toLocaleString()));
-  tr.addEventListener('click',()=>item.directory?openFolder(item.path):preview(item.path));tbody.append(tr)
+  tr.addEventListener('click',()=>{if(window.BowerbirdDiagnostics)window.BowerbirdDiagnostics.event('FILE_SELECTED',{target:item.directory?'open-folder':'preview-file'});return item.directory?openFolder(item.path):preview(item.path)});tbody.append(tr)
  }
  if(!data.items.length){const tr=el('tr');const td=el('td','','Folder is empty');td.colSpan=4;tr.append(td);tbody.append(tr)}
 }
