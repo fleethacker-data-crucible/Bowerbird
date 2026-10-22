@@ -28,3 +28,16 @@
 #diagnostics-panel{border-color:#46647a}
 .diagnostic-text{background:#07101a;border:1px solid var(--line);border-radius:8px;padding:16px;overflow:auto;max-height:340px;white-space:pre-wrap;overflow-wrap:anywhere;color:#a8c3d6;font:12px/1.6 Consolas,monospace}
 #notice.error{white-space:pre-wrap}
+
+/* Folder scan source selector — always visible above Explorer */
+.workspace-panel{padding:18px 20px;border-color:#45586d;background:linear-gradient(130deg,#192838,#111c29);margin-bottom:20px}
+.workspace-intro{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}
+.workspace-intro h2{font-size:19px;margin:2px 0 0}
+.workspace-description{margin:4px 0 0;font-size:12px}
+.workspace-current{color:var(--accent2);font:12px/1.5 Consolas,monospace;max-width:100%;overflow-wrap:anywhere}
+.workspace-form{display:flex;align-items:stretch;gap:10px;margin-top:16px}
+.workspace-form input{min-width:0;flex:1;font-family:Consolas,monospace}
+.workspace-form button{white-space:nowrap}
+.workspace-help{margin:9px 0 0;font-size:12px;color:var(--muted)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+@media(max-width:850px){.workspace-form{flex-wrap:wrap}.workspace-form input{width:100%;flex-basis:100%}.workspace-form button{flex:1}}
