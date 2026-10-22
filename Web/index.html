@@ -4,7 +4,7 @@
 <noscript><div class="panel" style="margin:12px">Bowerbird Studio requires JavaScript enabled in this browser. If scripts are restricted, use Start-Bowerbird.bat diagnostics and contact your workstation administrator.</div></noscript>
 <div class="shell">
  <aside class="sidebar">
-  <div class="brand"><span class="brand-mark">◈</span><div><strong>BOWERBIRD</strong><small>STUDIO / v2.0</small></div></div>
+  <div class="brand"><span class="brand-mark">◈</span><div><strong>BOWERBIRD</strong><small>STUDIO / v2.2</small></div></div>
   <div class="nav-label">WORKSPACE</div>
   <nav aria-label="Primary navigation">
    <button class="nav active" data-view="files">▤ <span>Explorer</span></button>
@@ -26,6 +26,16 @@
    <p class="muted">A local report of GUI actions, API statuses, and startup failures. Share this text only if it is approved for your environment.</p>
    <div class="formline"><button id="refresh-diagnostics" class="ghost">Refresh Report</button><button id="copy-diagnostics" class="primary">Copy Report</button></div>
    <pre id="diagnostics-report" class="diagnostic-text">Click Refresh Report to inspect startup and browser logs.</pre>
+  </section>
+  <section id="workspace-panel" class="panel workspace-panel" aria-labelledby="workspace-heading">
+   <div class="workspace-intro"><div><span class="eyebrow">SCAN LOCATION</span><h2 id="workspace-heading">Folder to scan</h2><p class="muted workspace-description">Select a folder on your Windows PC. You can change this at any time without restarting Bowerbird.</p></div><span id="workspace-current" class="workspace-current" title="Current scan folder">Loading folder…</span></div>
+   <form id="workspace-form" class="workspace-form">
+    <label for="workspace-path" class="sr-only">Full folder path</label>
+    <input id="workspace-path" name="workspace-path" type="text" placeholder="C:\Users\You\Pictures\Screenshots" spellcheck="false" autocomplete="off" aria-describedby="workspace-help" required>
+    <button id="browse-folder" class="ghost" type="button"><span aria-hidden="true">▣</span> Browse Folder…</button>
+    <button id="change-folder" class="primary" type="submit">Use This Folder</button>
+   </form>
+   <p class="workspace-help" id="workspace-help">Browse opens a Windows folder selector. If it's unavailable, paste or type a full directory path and click Use This Folder. Previous scan results and pending moves won't carry over.</p>
   </section>
   <section class="view active" id="view-files">
    <div class="toolbar"><div class="breadcrumb"><button id="up" class="ghost">↑ Up</button><span id="cwd">/</span></div><div class="toolbar-options"><label class="check"><input type="checkbox" id="recurse" checked> Include subfolders</label><label class="check"><input type="checkbox" id="content-index"> Index file contents locally</label><label class="check"><input type="checkbox" id="ocr-index"> Use available OCR engine</label></div></div>
