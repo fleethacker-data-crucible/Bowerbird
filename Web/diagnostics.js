@@ -98,7 +98,7 @@
  const options={
   'all':()=>true,
   'errors':e=>isError(e.type),
-  'actions':e=>e.type==='BUTTON_CLICK'||e.type==='CONTROL_CHANGED'||e.type==='PAGE_CHANGED',
+  'actions':e=>e.type==='BUTTON_CLICK'||e.type==='CONTROL_CHANGED'||e.type==='PAGE_CHANGED'||e.type==='FILE_SELECTED',
   'api':e=>e.type.startsWith('API_')||e.type==='NETWORK_ERROR'
  };
  function updateCounters(){
@@ -246,7 +246,7 @@
  function stop(){emit('SESSION_STOP',{target:'diagnostics'},true);recorder.active=false;updateCounters()}
  function clearSession(){
   if(recorder.active)stop();
-  recorder.events=[];recorder.countErrors=0;recorder.lastAction='';recorder.lastRequestId='';
+  recorder.events=[];recorder.countErrors=0;recorder.lastAction='';recorder.lastRequestId='';recorder.id='';recorder.started=null;
   updateCounters();renderTimeline();
  }
  function download(name,body,contentType){
@@ -383,7 +383,7 @@
  }
  window.BowerbirdDiagnostics={
   setToken,activate,
-  event:(type,detail)=>emit(type,detail,isError(type)),
+  event:(type,detail)=>{if(type==='FILE_SELECTED'&&detail&&detail.target){recorder.lastAction=safeIdentifier(detail.target);updateCounters()}emit(type,detail,isError(type))},
   page:view=>emit('PAGE_CHANGED',{target:view}),
   lastRequestId:()=>recorder.lastRequestId,
   sessionState:()=>({active:recorder.active,eventCount:recorder.events.length,errors:recorder.countErrors})
