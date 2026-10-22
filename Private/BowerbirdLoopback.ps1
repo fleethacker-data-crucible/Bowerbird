@@ -7,7 +7,7 @@ function Start-BowerbirdLoopback {
  foreach($candidate in $attempts){
   $listener=$null
   try{
-   $listener=New-Object Net.Sockets.TcpListener([Net.IPAddress]::Loopback,[int]$candidate)
+   $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,[int]$candidate)
    $listener.Start()
    return [pscustomobject]@{Listener=$listener;Port=([Net.IPEndPoint]$listener.LocalEndpoint).Port;Transport='PowerShellTcp'}
   }catch [Net.Sockets.SocketException]{
@@ -30,8 +30,7 @@ function Read-BowerbirdLoopbackContext {
    while($true){
     $b=$stream.ReadByte()
     if($b -lt 0){throw 'Client closed before request'}
-    $headerBytes.Add([byte]$b
-    )
+    $headerBytes.Add([byte]$b)
     $n=$headerBytes.Count
     if($n -gt 16384){throw 'Header exceeds 16 KB'}
     if($n -ge 4 -and $headerBytes[$n-4] -eq 13 -and $headerBytes[$n-3] -eq 10 -and $headerBytes[$n-2] -eq 13 -and $headerBytes[$n-1] -eq 10){break}
