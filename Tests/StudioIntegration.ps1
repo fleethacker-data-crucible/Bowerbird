@@ -4,7 +4,7 @@
  Creates a disposable workspace and starts/stops a localhost server.
  Run: powershell.exe -NoProfile -File .\Tests\StudioIntegration.ps1
 #>
-[CmdletBinding()]param([ValidateSet('Auto','HttpListener','Tcp')][string]$Transport='Tcp')
+[CmdletBinding()]param([ValidateSet('Auto','HttpListener','Tcp','CompiledTcp')][string]$Transport='Tcp',[switch]$SimulateCollision)
 $ErrorActionPreference='Stop'
 $repo=Split-Path $PSScriptRoot -Parent
 $work=Join-Path ([IO.Path]::GetTempPath()) ('BowerbirdStudioTest_'+[guid]::NewGuid().ToString('N'))
@@ -13,12 +13,19 @@ $stdout=Join-Path $work 'stdout.txt';$stderr=Join-Path $work 'stderr.txt'
 $server=Join-Path $repo 'Start-BowerbirdStudio.ps1'
 $port=Get-Random -Minimum 22000 -Maximum 45000
 $process=$null
+$blocker=$null
 function Assert([bool]$Condition,[string]$Message){if(-not $Condition){throw ('ASSERT FAILED: '+$Message)}}
 try{
  [IO.File]::WriteAllText((Join-Path $work 'first.txt'),'unique apple bowerbird analysis')
  Copy-Item (Join-Path $work 'first.txt') (Join-Path $work 'second.txt')
  [IO.File]::WriteAllText((Join-Path $work 'third.ps1'),'Write-Output test')
  [IO.File]::WriteAllBytes((Join-Path $work 'Screenshot_2026-10-21_123456.png'),[Convert]::FromBase64String('iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAIAAADZF8uwAAAAFUlEQVR4nGP8z0AYMBGhZlQR3RUBAM/gARe7TQcrAAAAAElFTkSuQmCC'))
+ if($SimulateCollision){
+  if($Transport -notin @('Auto','Tcp')){throw 'Port collision test requires pure PowerShell transport'}
+  $blocker=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0)
+  $blocker.Start()
+  $port=([Net.IPEndPoint]$blocker.LocalEndpoint).Port
+ }
  $arguments="-NoProfile -NonInteractive -File ""$server"" -Root ""$work"" -Port $port -NoBrowser -Transport $Transport"
  $process=Start-Process -FilePath 'powershell.exe' -ArgumentList $arguments -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
  $session=$null
@@ -32,8 +39,18 @@ try{
  }
  Assert (-not [string]::IsNullOrWhiteSpace($session)) 'Server startup URL'
  $uri=[uri]$session
+ if($SimulateCollision){Assert ($uri.Port -ne $port) 'Port collision must select a different localhost port'}
+ $port=$uri.Port
  $token=[uri]::UnescapeDataString(($uri.Query.TrimStart('?') -split '=')[1])
- $base="http://127.0.0.1:$port/api/"
+ $site="http://127.0.0.1:$port/"
+ $base=$site+'api/'
+ # Unlike prior versions, validate the browser page and assets, not API only.
+ foreach($asset in @(@{path='';type='text/html';needle='BOWERBIRD'},@{path='app.js';type='javascript';needle='async function api'},@{path='style.css';type='text/css';needle='.shell'})){
+  $response=Invoke-WebRequest -Uri ($site+$asset.path) -UseBasicParsing -TimeoutSec 20
+  Assert ($response.StatusCode -eq 200) ('Browser asset HTTP 200: '+$asset.path)
+  Assert ($response.Headers['Content-Type'] -match $asset.type) ('Browser asset Content-Type: '+$asset.path)
+  Assert ($response.Content -match [regex]::Escape($asset.needle)) ('Browser asset contains expected content: '+$asset.path)
+ }
  $headers=@{'X-Bowerbird-Token'=$token}
  function Call([string]$route,$value){
   $body=ConvertTo-Json -InputObject $value -Depth 10 -Compress
@@ -46,6 +63,7 @@ try{
  }
  $status=Call 'status' @{}
  Assert $status.ok 'Status endpoint'
+ Assert ($status.port -eq $port) 'Returned port matches listener'
  Assert (-not $status.cloudAI) 'Cloud AI must be off by default'
  $files=Call 'files' @{path='.'}
  Assert ($files.items.Count -ge 3) 'File explorer'
@@ -80,13 +98,14 @@ try{
  $blocked=$false
  try{$null=Call 'stream' @{prompt='hello'}}catch{$blocked=$true}
  Assert $blocked 'Cloud requests should be disabled'
- Write-Host 'PASS: Bowerbird Studio localhost integration (browse, index, search, duplicates, agents, plan, apply, undo, isolation)' -ForegroundColor Green
+ Write-Host "PASS: Bowerbird Studio browser+API integration ($Transport, collision=$SimulateCollision, port=$port)" -ForegroundColor Green
 }catch{
  Write-Host ('FAIL: '+$_.Exception.Message) -ForegroundColor Red
  if(Test-Path $stderr){Write-Host (Get-Content -LiteralPath $stderr -Raw -ErrorAction SilentlyContinue)}
  if(Test-Path $stdout){Write-Host (Get-Content -LiteralPath $stdout -Raw -ErrorAction SilentlyContinue)}
  exit 1
 }finally{
+ if($blocker){$blocker.Stop()}
  if($process -and -not $process.HasExited){Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue}
  Start-Sleep -Milliseconds 150
  Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
