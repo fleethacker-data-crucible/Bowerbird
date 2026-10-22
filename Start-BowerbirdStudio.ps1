@@ -25,14 +25,15 @@ try{
 }catch{throw "Cannot initialize Bowerbird user data directory: $($_.Exception.Message)"}
 $script:LogFile=Join-Path $script:LogDir ('studio-'+(Get-Date -Format 'yyyyMMdd')+'.jsonl')
 function Write-BowerbirdDiagnostic {
- [CmdletBinding()]param([string]$Level='INFO',[string]$Event,[string]$Message='',[string]$Route='')
+ [CmdletBinding()]param([string]$Level='INFO',[string]$Event,[string]$Message='',[string]$Route='',[string]$RequestId='')
  try{
   # No HTTP query strings, prompt text, credentials, or document content are logged.
   $safe=([string]$Message -replace '(?i)(token|password|secret|api[_-]?key|bearer|authorization)\s*[:=]\s*\S+','$1=[REDACTED]')
   $safe=$safe -replace '(?i)https?://[^\s]+','[URL REDACTED]'
-  if($safe.Length -gt 500){$safe=$safe.Substring(0,500)}
+  if(Get-Command Get-BowerbirdSafeDiagnosticText -ErrorAction SilentlyContinue){$safe=Get-BowerbirdSafeDiagnosticText -Value $safe -Limit 480}
+  elseif($safe.Length -gt 480){$safe=$safe.Substring(0,480)}
   $line=[pscustomobject]@{
-   time=[DateTime]::UtcNow.ToString('o');level=$Level;event=$Event;route=$Route;message=$safe
+   time=[DateTime]::UtcNow.ToString('o');level=$Level;event=$Event;route=$Route;requestId=$RequestId;message=$safe
   }|ConvertTo-Json -Compress
   [IO.File]::AppendAllText($script:LogFile,$line+[Environment]::NewLine,[Text.Encoding]::UTF8)
  }catch{Write-Warning 'Unable to write Bowerbird diagnostics'}
@@ -78,6 +79,7 @@ Write-BowerbirdDiagnostic -Event 'BOOT' -Message 'Starting Bowerbird Studio.'
 . (Join-Path $AppRoot 'Private\ArcBridge.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdLoopback.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdWorkspace.ps1')
+. (Join-Path $AppRoot 'Private\BowerbirdSupport.ps1')
 $null=Set-BowerbirdWorkspace -Folder $script:AllowedRoot -Initial
 $tokenBytes=New-Object byte[] 32
 $rng=[Security.Cryptography.RandomNumberGenerator]::Create()
@@ -113,6 +115,8 @@ if($Transport -in @('Auto','Tcp')){
  $script:Session=New-Object Bowerbird.Transport.Server($Port)
  $script:Session.Start()
 }
+$script:CurrentPort=$Port
+$script:CloudEnabled=[bool]$AllowCloudAI
 Write-BowerbirdDiagnostic -Event 'BOUND' -Message ("Transport=$Transport Port=$Port")
 function Resolve-WorkspacePath([string]$Relative){
  if([string]::IsNullOrWhiteSpace($Relative) -or $Relative -eq '.'){return $script:AllowedRoot}
@@ -185,10 +189,23 @@ function Safe-Preview([string]$Relative){
 function Invoke-Api([string]$Route,$Body){
  switch($Route){
   '/api/diagnostics' {
-   $lines=if(Test-Path -LiteralPath $script:LogFile){@(Get-Content -LiteralPath $script:LogFile -Tail 90 -ErrorAction SilentlyContinue)}else{@()}
-   $events=@(foreach($line in $lines){try{$line|ConvertFrom-Json}catch{}})
-   return @{ok=$true;version='2.1';transport=$script:Session.GetType().Name;port=$Port;events=$events;logPath=$script:LogFile}
+   return @{ok=$true;version='2.3';transport=$script:Session.GetType().Name;port=$Port
+    events=@(Get-BowerbirdRecentDiagnostics -Limit 250);logPath=$script:LogFile}
   }
+  '/api/diagnostics/health' {
+   $checks=New-Object 'System.Collections.Generic.List[object]'
+   $checks.Add(@{name='Local backend';ok=$true;detail='Loopback server is responsive'})
+   $checks.Add(@{name='Active workspace';ok=(Test-Path -LiteralPath $script:AllowedRoot -PathType Container);detail='Folder availability'})
+   $checks.Add(@{name='Browser assets';ok=((Test-Path (Join-Path $script:AppRoot 'Web\index.html')) -and (Test-Path (Join-Path $script:AppRoot 'Web\app.js')) -and (Test-Path (Join-Path $script:AppRoot 'Web\diagnostics.js')));detail='Static UI files'})
+   $checks.Add(@{name='Application log';ok=(Test-Path -LiteralPath $script:LogFile);detail='Local diagnostic log'})
+   $checks.Add(@{name='Local index';ok=(Test-Path -LiteralPath $script:IndexPath);detail='An index is optional until Build Index'})
+   $checks.Add(@{name='Cloud AI permission';ok=[bool]$AllowCloudAI;detail='Off by default; not an endpoint connectivity test'})
+   return @{ok=$true;checks=@($checks.ToArray());version='2.3'}
+  }
+  '/api/feedback/create' {return New-BowerbirdFeedbackIssue $Body}
+  '/api/feedback/list' {return @{issues=@(Get-BowerbirdFeedbackIssues -MaxItems 100)}}
+  '/api/feedback/status' {return Set-BowerbirdFeedbackStatus $Body}
+  '/api/diagnostics/support' {return Get-BowerbirdSupportSnapshot -IncludeNotes:([bool]$Body.includeNotes)}
   '/api/client-event' {
    $event=[string]$Body.event;$target=[string]$Body.target
    if($event -notmatch '^(CLICK|CLIENT_ERROR|READY|API_ERROR)$'){throw 'Invalid diagnostic event'}
@@ -196,7 +213,7 @@ function Invoke-Api([string]$Route,$Body){
    Write-BowerbirdDiagnostic -Event ('UI_'+$event) -Message $target
    return @{ok=$true}
   }
-  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;port=$Port;transport=$script:Session.GetType().Name;indexExists=(Test-Path $script:IndexPath);cloudAI=[bool]$AllowCloudAI;version='2.2';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional','rename','workspace-switch','workspace-picker')}}
+  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;port=$Port;transport=$script:Session.GetType().Name;indexExists=(Test-Path $script:IndexPath);cloudAI=[bool]$AllowCloudAI;version='2.3';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional','rename','workspace-switch','workspace-picker','diagnostics','feedback','session-recording')}}
   '/api/workspace/select' {
    return Set-BowerbirdWorkspace -Folder ([string]$Body.path)
   }
@@ -357,7 +374,10 @@ try{
  while($true){
   $ctx=if($script:PureTcp){Read-BowerbirdLoopbackContext -Listener $script:Session -Port $Port}else{$script:Session.GetContext()}
   $req=$ctx.Request;$res=$ctx.Response
+  $requestId=[guid]::NewGuid().ToString('N').Substring(0,12)
+  $clock=[Diagnostics.Stopwatch]::StartNew()
   try{
+   $res.Headers.Add('X-Bowerbird-Request-ID',$requestId)
    $res.Headers.Add('X-Content-Type-Options','nosniff')
    $res.Headers.Add('Referrer-Policy','no-referrer')
    $res.Headers.Add('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-src blob:; frame-ancestors 'none'; base-uri 'none'")
@@ -368,6 +388,8 @@ try{
     $res.ContentType='text/html; charset=utf-8';$res.OutputStream.Write($bytes,0,$bytes.Length)
    }elseif($req.Url.AbsolutePath -eq '/app.js' -and $req.HttpMethod -eq 'GET'){
     $bytes=[IO.File]::ReadAllBytes((Join-Path $AppRoot 'Web\app.js'));$res.ContentType='application/javascript; charset=utf-8';$res.OutputStream.Write($bytes,0,$bytes.Length)
+   }elseif($req.Url.AbsolutePath -eq '/diagnostics.js' -and $req.HttpMethod -eq 'GET'){
+    $bytes=[IO.File]::ReadAllBytes((Join-Path $AppRoot 'Web\diagnostics.js'));$res.ContentType='application/javascript; charset=utf-8';$res.OutputStream.Write($bytes,0,$bytes.Length)
    }elseif($req.Url.AbsolutePath -eq '/style.css' -and $req.HttpMethod -eq 'GET'){
     $bytes=[IO.File]::ReadAllBytes((Join-Path $AppRoot 'Web\style.css'));$res.ContentType='text/css; charset=utf-8';$res.OutputStream.Write($bytes,0,$bytes.Length)
    }elseif($req.Url.AbsolutePath.StartsWith('/api/') -and $req.HttpMethod -eq 'POST'){
@@ -387,10 +409,10 @@ try{
    }else{Send-Json $res @{error='Not found'} 404}
   }catch{
    $msg=$_.Exception.Message
-   Write-BowerbirdDiagnostic -Level ERROR -Event 'HTTP_ERROR' -Route $req.Url.AbsolutePath -Message $msg
-   try{Send-Json $res @{error=$msg} 400}catch{}
+   Write-BowerbirdDiagnostic -Level ERROR -Event 'HTTP_ERROR' -Route $req.Url.AbsolutePath -RequestId $requestId -Message $msg
+   try{Send-Json $res @{error=$msg;requestId=$requestId} 400}catch{}
   }finally{
-   try{Write-BowerbirdDiagnostic -Event 'REQUEST' -Route $req.Url.AbsolutePath -Message ([string]$res.StatusCode)}catch{}
+   try{$clock.Stop();Write-BowerbirdDiagnostic -Event 'REQUEST' -Route $req.Url.AbsolutePath -RequestId $requestId -Message ('HTTP '+[string]$res.StatusCode+' '+$clock.ElapsedMilliseconds+'ms')}catch{}
    try{$res.Close()}catch{}
   }
  }
