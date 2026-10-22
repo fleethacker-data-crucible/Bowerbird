@@ -410,7 +410,8 @@ try{
   }catch{
    $msg=$_.Exception.Message
    Write-BowerbirdDiagnostic -Level ERROR -Event 'HTTP_ERROR' -Route $req.Url.AbsolutePath -RequestId $requestId -Message $msg
-   try{Send-Json $res @{error=$msg;requestId=$requestId} 400}catch{}
+   $safeError=Get-BowerbirdSafeDiagnosticText -Value $msg -Limit 360
+   try{Send-Json $res @{error=$safeError;requestId=$requestId} 400}catch{}
   }finally{
    try{$clock.Stop();Write-BowerbirdDiagnostic -Event 'REQUEST' -Route $req.Url.AbsolutePath -RequestId $requestId -Message ('HTTP '+[string]$res.StatusCode+' '+$clock.ElapsedMilliseconds+'ms')}catch{}
    try{$res.Close()}catch{}
