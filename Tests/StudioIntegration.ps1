@@ -90,6 +90,45 @@ try{
  Assert ((Test-Path (Join-Path $work 'Organized\Text\first.txt'))) 'Apply move'
  $undo=Call 'undo' @{confirm='UNDO'}
  Assert ((Test-Path (Join-Path $work 'first.txt'))) 'Undo move'
+ # Switching folders must isolate indexes and discard all pending move proposals.
+ $planBeforeSwitch=Call 'plan' @{destination='Organized';rules=$rules}
+ Assert ($planBeforeSwitch.count -ge 2) 'Pending plan exists before folder switch'
+ $other=Join-Path $work 'AnotherScanFolder'
+ [IO.Directory]::CreateDirectory($other)|Out-Null
+ [IO.File]::WriteAllText((Join-Path $other 'OtherFolderOnly.txt'),'A separate workspace for GUI folder selection')
+ $change=Call 'workspace/select' @{path=$other}
+ Assert ($change.changed -and $change.root -ieq $other) 'Folder selector changes workspace'
+ Assert (-not $change.indexExists) 'New folder must not reuse previous index'
+ $now=Call 'status' @{}
+ Assert ($now.root -ieq $other -and -not $now.indexExists) 'Status reports newly selected scan root'
+ $contents=Call 'files' @{path='.'}
+ Assert ($contents.items.Count -eq 1 -and $contents.items[0].name -eq 'OtherFolderOnly.txt') 'Explorer uses selected folder'
+ $blocked=$false
+ try{$null=Call 'search' @{query='bowerbird'}}catch{$blocked=$true}
+ Assert $blocked 'Search must not reuse previous scan index'
+ $blocked=$false
+ try{$null=Call 'apply' @{confirm='APPLY';id=$planBeforeSwitch.id}}catch{$blocked=$true}
+ Assert $blocked 'Cannot apply a previous folder plan'
+ $otherIndex=Call 'index' @{path='.';recurse=$true;includeContent=$true}
+ Assert ($otherIndex.indexed -eq 1) 'Re-index scans only new folder'
+ $otherSearch=Call 'search' @{query='separate'}
+ Assert ($otherSearch.items.Count -eq 1) 'New folder search uses new index'
+ $blocked=$false
+ try{$null=Call 'workspace/select' @{path='.'}}catch{$blocked=$true}
+ Assert $blocked 'Relative folder selection is prohibited'
+ $blocked=$false
+ try{$null=Call 'workspace/select' @{path=(Join-Path $work 'DefinitelyMissingFolder')}}catch{$blocked=$true}
+ Assert $blocked 'Unavailable folder selection is prohibited'
+ $stillHere=Call 'status' @{}
+ Assert ($stillHere.root -ieq $other) 'Invalid selection must not change workspace'
+ $return=Call 'workspace/select' @{path=$work}
+ Assert ($return.root -ieq $work -and $return.indexExists) 'Switching back restores original index without mixing workspaces'
+ $blocked=$false
+ try{$null=Call 'apply' @{confirm='APPLY';id=$planBeforeSwitch.id}}catch{$blocked=$true}
+ Assert $blocked 'Returning to original folder does not revive old move plan'
+ $firstAgain=Call 'files' @{path='.'}
+ Assert (@($firstAgain.items|Where-Object {$_.name -eq 'first.txt'}).Count -eq 1) 'Original explorer state returns'
+ Write-Host 'PASS: Folder switching isolates indexes, invalidates move plans and rejects invalid paths' -ForegroundColor Green
  # A blocked traversal must return HTTP 400; no file contents should leave the workspace.
  $blocked=$false
  try{$null=Call 'files' @{path='..\Windows'}}catch{$blocked=$true}
