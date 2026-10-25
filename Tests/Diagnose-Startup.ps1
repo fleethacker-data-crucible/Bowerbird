@@ -11,7 +11,7 @@ $ok=$true
 try{
  Add-Check 'Windows PowerShell 5.1' ($PSVersionTable.PSVersion.Major -eq 5) ("Version "+$PSVersionTable.PSVersion)
  Add-Check 'Apartment state' ($host.Runspace.ApartmentState -eq 'STA') ([string]$host.Runspace.ApartmentState)
- $required=@('Start-BowerbirdStudio.ps1','Private\BowerbirdLoopback.ps1','Web\index.html','Web\app.js','Web\style.css')
+ $required=@('Start-BowerbirdStudio.ps1','Stop-Bowerbird.ps1','Private\BowerbirdLoopback.ps1','Private\BowerbirdLifecycle.ps1','Web\index.html','Web\app.js','Web\lifecycle.js','Web\style.css')
  foreach($file in $required){
   $exists=Test-Path -LiteralPath (Join-Path $repo $file) -PathType Leaf
   Add-Check ('Required file: '+$file) $exists $(if($exists){'Present'}else{'Missing'})
@@ -45,6 +45,10 @@ try{
   # This is not a startup failure. Studio dynamically selects another free port.
   Add-Check 'Preferred GUI port' $true ("$PreferredPort busy or reserved; automatic port allocation will be used")
  }
+ . (Join-Path $repo 'Private\BowerbirdLifecycle.ps1')
+ $running=@(Get-BowerbirdProcesses)
+ # Informational: a running server is not a failure, but the launcher will offer to replace it.
+ Add-Check 'Running Studio servers' $true $(if($running.Count){($running|ForEach-Object {'PID '+$_.Pid}) -join ', '}else{'None'})
  $machine=Get-ExecutionPolicy -List
  Write-Host ''
  Write-Host 'Effective PowerShell execution policy (read-only):' -ForegroundColor Cyan

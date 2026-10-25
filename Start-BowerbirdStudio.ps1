@@ -3,18 +3,38 @@
  Bowerbird Studio: dependency-free, localhost-only PowerShell web service.
  Launch: powershell -NoProfile -File .\Start-BowerbirdStudio.ps1 -Root "$env:USERPROFILE\Pictures"
  No admin install required. Browser assets are static, served from Web/.
+ Lifecycle: the browser tab owns the server. It stops itself 20 s after the last heartbeat from
+ any open tab, or 5 s after the tab says it is leaving; End session in the sidebar stops it now.
+  -Stay (or --stay)        keep running after the tab closes. BOWERBIRD_AUTO_STOP=0 does the same,
+                           as an environment variable or in Config\bowerbird.env.
+  -Replace (or --replace)  if Bowerbird Studio is already running, stop it without asking.
+ Stop-Bowerbird.ps1 stops every running instance from a shell.
 #>
-[CmdletBinding()]param(
- [string]$Root='',
+[CmdletBinding(PositionalBinding=$false)]param(
+ [Parameter(Position=0)][string]$Root='',
  [ValidateRange(0,65535)][int]$Port=8767,
  [switch]$NoBrowser,
  [switch]$AllowCloudAI,
  [ValidateSet('Auto','HttpListener','Tcp','CompiledTcp')][string]$Transport='Auto',
  [switch]$FixedPort,
- [switch]$LocalDev
+ [switch]$LocalDev,
+ [switch]$Stay,
+ [switch]$Replace,
+ [Parameter(ValueFromRemainingArguments=$true)][string[]]$Rest
 )
 $ErrorActionPreference='Stop'
 $script:AppRoot=$PSScriptRoot
+# The .bat launchers pass their arguments through, so accept --stay / --replace as well.
+$options=@($Rest)
+if($Root -match '^--?[A-Za-z]'){$options=@($Root)+$options;$Root=''}
+foreach($option in $options){
+ switch -Regex ([string]$option){
+  '^--?stay$' {$Stay=[switch]$true}
+  '^--?replace$' {$Replace=[switch]$true}
+  '^--?no-browser$' {$NoBrowser=[switch]$true}
+  default {if($option){Write-Warning ('Ignoring unknown option '+$option)}}
+ }
+}
 # Never write state to the downloaded/program installation directory, which may be read-only.
 $localData=[Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
 if(-not $localData){$localData=[IO.Path]::GetTempPath()}
@@ -81,6 +101,32 @@ Write-BowerbirdDiagnostic -Event 'BOOT' -Message 'Starting Bowerbird Studio.'
 . (Join-Path $AppRoot 'Private\BowerbirdLoopback.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdWorkspace.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdSupport.ps1')
+. (Join-Path $AppRoot 'Private\BowerbirdLifecycle.ps1')
+# One instance: offer to stop a running server before binding a new one.
+$running=@(Get-BowerbirdProcesses)
+if($running.Count -gt 0){
+ $where=($running|ForEach-Object {if($_.Url){$_.Url+' (PID '+$_.Pid+')'}else{'PID '+$_.Pid}}) -join ', '
+ Write-Host ('Bowerbird Studio is already running: '+$where) -ForegroundColor Yellow
+ $answer=''
+ if($Replace){$answer='y'}
+ elseif(Test-BowerbirdCanPrompt){
+  try{$answer=[string](Read-Host 'Stop it and start fresh? [Y/n]')}catch{$answer='n'}
+  if([string]::IsNullOrWhiteSpace($answer)){$answer='y'}
+ }
+ else{$answer='keep';Write-Host 'Non-interactive start: leaving it running and starting another instance. Use -Replace to stop it first.' -ForegroundColor Yellow}
+ if($answer -match '^[Yy]'){
+  foreach($stoppedPid in @(Stop-BowerbirdProcesses -Processes $running)){Write-Host ('  stopped PID '+$stoppedPid) -ForegroundColor DarkGray}
+  Write-BowerbirdDiagnostic -Event 'REPLACED' -Message 'Stopped a running instance before starting.'
+ }elseif($answer -ne 'keep'){
+  Write-Host 'Leaving the running server alone. Use End session in its browser tab, or Stop-Bowerbird.ps1.' -ForegroundColor DarkGray
+  exit 0
+ }
+}
+$autoStop=(-not $Stay) -and (Get-BowerbirdAutoStopSetting -ConfigPath (Join-Path $AppRoot 'Config\bowerbird.env'))
+$script:Presence=New-BowerbirdPresence -AutoStop $autoStop
+$script:StopReason=''
+$script:RuntimeFile=''
+$script:PendingHttpContext=$null
 $null=Set-BowerbirdWorkspace -Folder $script:AllowedRoot -Initial
 $tokenBytes=New-Object byte[] 32
 $rng=[Security.Cryptography.RandomNumberGenerator]::Create()
@@ -187,6 +233,14 @@ function Safe-Preview([string]$Relative){
  if(@('.txt','.md','.json','.csv','.ps1','.psm1','.js','.ts','.html','.css','.xml','.log','.yml','.yaml','.ini','.sql','.py') -notcontains $file.Extension.ToLowerInvariant()){throw 'Preview supports text files only'}
  return @{path=(Relative-Path $full);text=[IO.File]::ReadAllText($full)}
 }
+function Read-BowerbirdHttpListenerContext($Listener,[int]$TimeoutMilliseconds){
+ # Same contract as Read-BowerbirdLoopbackContext -TimeoutMilliseconds: $null when nothing arrived.
+ if($null -eq $script:PendingHttpContext){$script:PendingHttpContext=$Listener.BeginGetContext($null,$null)}
+ if(-not $script:PendingHttpContext.AsyncWaitHandle.WaitOne($TimeoutMilliseconds)){return $null}
+ $pending=$script:PendingHttpContext
+ $script:PendingHttpContext=$null
+ return $Listener.EndGetContext($pending)
+}
 function Invoke-Api([string]$Route,$Body){
  switch($Route){
   '/api/diagnostics' {
@@ -197,7 +251,7 @@ function Invoke-Api([string]$Route,$Body){
    $checks=New-Object 'System.Collections.Generic.List[object]'
    $checks.Add(@{name='Local backend';ok=$true;detail='Loopback server is responsive'})
    $checks.Add(@{name='Active workspace';ok=(Test-Path -LiteralPath $script:AllowedRoot -PathType Container);detail='Folder availability'})
-   $checks.Add(@{name='Browser assets';ok=((Test-Path (Join-Path $script:AppRoot 'Web\index.html')) -and (Test-Path (Join-Path $script:AppRoot 'Web\app.js')) -and (Test-Path (Join-Path $script:AppRoot 'Web\diagnostics.js')));detail='Static UI files'})
+   $checks.Add(@{name='Browser assets';ok=((Test-Path (Join-Path $script:AppRoot 'Web\index.html')) -and (Test-Path (Join-Path $script:AppRoot 'Web\app.js')) -and (Test-Path (Join-Path $script:AppRoot 'Web\diagnostics.js')) -and (Test-Path (Join-Path $script:AppRoot 'Web\lifecycle.js')));detail='Static UI files'})
    $checks.Add(@{name='Application log';ok=(Test-Path -LiteralPath $script:LogFile);detail='Local diagnostic log'})
    $checks.Add(@{name='Local index';ok=(Test-Path -LiteralPath $script:IndexPath);detail='An index is optional until Build Index'})
    $checks.Add(@{name='Cloud AI permission';ok=[bool]$AllowCloudAI;detail='Off by default; not an endpoint connectivity test'})
@@ -214,7 +268,7 @@ function Invoke-Api([string]$Route,$Body){
    Write-BowerbirdDiagnostic -Event ('UI_'+$event) -Message $target
    return @{ok=$true}
   }
-  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;port=$Port;transport=$script:Session.GetType().Name;indexExists=(Test-Path $script:IndexPath);cloudAI=[bool]$AllowCloudAI;version='2.3';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional','rename','workspace-switch','workspace-picker','diagnostics','feedback','session-recording')}}
+  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;port=$Port;transport=$script:Session.GetType().Name;indexExists=(Test-Path $script:IndexPath);cloudAI=[bool]$AllowCloudAI;version='2.3';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional','rename','workspace-switch','workspace-picker','diagnostics','feedback','session-recording','lifecycle')}}
   '/api/workspace/select' {
    return Set-BowerbirdWorkspace -Folder ([string]$Body.path)
   }
@@ -363,18 +417,36 @@ if($script:PortRequested -ne $Port){Write-Host "Port $($script:PortRequested) wa
 Write-Host "Transport: $($script:Session.GetType().Name)"
 Write-Host ('Session URL: '+$url+'?token='+[uri]::EscapeDataString($script:Token)) -ForegroundColor DarkGray
 Write-Host ('Diagnostic log: '+$script:LogFile)
+if($script:Presence.AutoStop){Write-Host 'Closing the browser tab stops the server (End session in the sidebar, Ctrl+C or Stop-Bowerbird.ps1 also stop it).'}
+else{Write-Host 'Auto-stop is off (-Stay or BOWERBIRD_AUTO_STOP=0): use End session, Ctrl+C or Stop-Bowerbird.ps1 to stop.' -ForegroundColor Yellow}
 Write-Host 'Press Ctrl+C to stop.'
-if(-not $NoBrowser){
- try{Start-Process ($url+'?token='+[uri]::EscapeDataString($script:Token)) -ErrorAction Stop}
- catch{
-  Write-BowerbirdDiagnostic -Level WARN -Event 'BROWSER_LAUNCH' -Message $_.Exception.Message
-  Write-Warning 'Browser did not open automatically. Copy the Session URL printed above into your browser.'
- }
-}
 try{
- while($true){
-  $ctx=if($script:PureTcp){Read-BowerbirdLoopbackContext -Listener $script:Session -Port $Port}else{$script:Session.GetContext()}
+ # Runtime file (pid, port, url, start time; never the token) lets Stop-Bowerbird.ps1 and the next
+ # launcher find this server. It lives in the app's existing %LOCALAPPDATA%\Bowerbird\Logs folder.
+ $script:RuntimeFile=Write-BowerbirdRuntimeFile -Directory $script:LogDir -Port $Port -Url $url -Transport $script:Session.GetType().Name -LocalDev:$LocalDev
+ if(-not $NoBrowser){
+  try{Start-Process ($url+'?token='+[uri]::EscapeDataString($script:Token)) -ErrorAction Stop}
+  catch{
+   Write-BowerbirdDiagnostic -Level WARN -Event 'BROWSER_LAUNCH' -Message $_.Exception.Message
+   Write-Warning 'Browser did not open automatically. Copy the Session URL printed above into your browser.'
+  }
+ }
+ while(-not $script:StopReason){
+  # Presence rule, checked at least once a second and between requests: stop when every tab is gone.
+  if(Test-BowerbirdBrowserGone -Presence $script:Presence){
+   $script:StopReason='AUTO_STOP'
+   Write-BowerbirdDiagnostic -Event 'AUTO_STOP' -Message 'No browser tab is open; the server stops itself (BOWERBIRD_AUTO_STOP=0 or -Stay keeps it running).'
+   Write-Host 'The browser tab closed; Bowerbird Studio stopped itself. Relaunch Start-Bowerbird.bat to continue.' -ForegroundColor Cyan
+   break
+  }
+  # Wait up to a second for a request so the check above keeps running while the server is idle.
+  if($script:PureTcp){$ctx=Read-BowerbirdLoopbackContext -Listener $script:Session -Port $Port -TimeoutMilliseconds 1000}
+  elseif($Transport -eq 'HttpListener'){$ctx=Read-BowerbirdHttpListenerContext -Listener $script:Session -TimeoutMilliseconds 1000}
+  else{$ctx=$script:Session.TryGetContext(1000)}
+  if($null -eq $ctx){continue}
   $req=$ctx.Request;$res=$ctx.Response
+  $quietRoute=$false
+  $job=$false
   $requestId=[guid]::NewGuid().ToString('N').Substring(0,12)
   $clock=[Diagnostics.Stopwatch]::StartNew()
   try{
@@ -389,14 +461,46 @@ try{
     $res.ContentType='text/html; charset=utf-8';$res.OutputStream.Write($bytes,0,$bytes.Length)
    }elseif($req.Url.AbsolutePath -eq '/app.js' -and $req.HttpMethod -eq 'GET'){
     $bytes=[IO.File]::ReadAllBytes((Join-Path $AppRoot 'Web\app.js'));$res.ContentType='application/javascript; charset=utf-8';$res.OutputStream.Write($bytes,0,$bytes.Length)
+   }elseif($req.Url.AbsolutePath -eq '/lifecycle.js' -and $req.HttpMethod -eq 'GET'){
+    $bytes=[IO.File]::ReadAllBytes((Join-Path $AppRoot 'Web\lifecycle.js'));$res.ContentType='application/javascript; charset=utf-8';$res.OutputStream.Write($bytes,0,$bytes.Length)
    }elseif($req.Url.AbsolutePath -eq '/diagnostics.js' -and $req.HttpMethod -eq 'GET'){
     $bytes=[IO.File]::ReadAllBytes((Join-Path $AppRoot 'Web\diagnostics.js'));$res.ContentType='application/javascript; charset=utf-8';$res.OutputStream.Write($bytes,0,$bytes.Length)
    }elseif($req.Url.AbsolutePath -eq '/style.css' -and $req.HttpMethod -eq 'GET'){
     $bytes=[IO.File]::ReadAllBytes((Join-Path $AppRoot 'Web\style.css'));$res.ContentType='text/css; charset=utf-8';$res.OutputStream.Write($bytes,0,$bytes.Length)
+   }elseif($req.Url.AbsolutePath -eq '/api/heartbeat' -and $req.HttpMethod -eq 'POST'){
+    # The leaving beacon (navigator.sendBeacon) cannot set headers, so this one route also accepts
+    # the session token as "session" in the JSON body. Never in the query string; bodies are never logged.
+    # A parse error message can quote the body (which may hold the token), so it is never logged.
+    $body=$null
+    if(-not $req.Headers['Origin'] -or $req.Headers['Origin'] -ceq "http://127.0.0.1:$Port"){
+     try{$body=Read-Body $req}catch{$body=$null}
+    }
+    if($req.Headers['Origin'] -and $req.Headers['Origin'] -cne "http://127.0.0.1:$Port"){Send-Json $res @{error='Origin denied'} 403}
+    elseif($null -eq $body){Send-Json $res @{error='Invalid heartbeat'} 400}
+    elseif($req.Headers['X-Bowerbird-Token'] -cne $script:Token -and [string]$body.session -cne $script:Token){Send-Json $res @{error='Invalid session token'} 403}
+    else{
+     $quietRoute=$true
+     Register-BowerbirdPresence -Presence $script:Presence -Tab ([string]$body.tab) -Leaving:([bool]$body.leaving)
+     Send-Json $res (Get-BowerbirdPresenceState -Presence $script:Presence)
+    }
    }elseif($req.Url.AbsolutePath.StartsWith('/api/') -and $req.HttpMethod -eq 'POST'){
     if($req.Headers['X-Bowerbird-Token'] -cne $script:Token){Send-Json $res @{error='Invalid session token'} 403}
     elseif($req.Headers['Origin'] -and $req.Headers['Origin'] -cne "http://127.0.0.1:$Port"){Send-Json $res @{error='Origin denied'} 403}
+    elseif($req.Url.AbsolutePath -eq '/api/session/stop'){
+     if($req.Headers['X-Bowerbird-Intent'] -cne 'end-session'){Send-Json $res @{error='End session requires the End session control'} 400}
+     else{
+      # The loop is single-threaded, so no request (save, apply, index...) is running now.
+      $script:StopReason='END_SESSION'
+      Write-BowerbirdDiagnostic -Event 'END_SESSION' -Message 'End session requested from the browser.'
+      Write-Host 'End session was selected in the browser; Bowerbird Studio stopped.' -ForegroundColor Cyan
+      Send-Json $res @{ok=$true;stopping=$true}
+     }
+    }
     else{
+     # Every other API request counts as a job: auto-stop never fires while one runs, and allows
+     # a short grace after it so heartbeats queued during a long index/apply/AI request are read.
+     $job=$true
+     Enter-BowerbirdJob -Presence $script:Presence
      $body=Read-Body $req
      if($req.Url.AbsolutePath -eq '/api/media'){Write-BowerbirdMedia $res ([string]$body.path)}
      elseif($req.Url.AbsolutePath -eq '/api/stream'){
@@ -414,12 +518,21 @@ try{
    $safeError=Get-BowerbirdSafeDiagnosticText -Value $msg -Limit 360
    try{Send-Json $res @{error=$safeError;requestId=$requestId} 400}catch{}
   }finally{
-   try{$clock.Stop();Write-BowerbirdDiagnostic -Event 'REQUEST' -Route $req.Url.AbsolutePath -RequestId $requestId -Message ('HTTP '+[string]$res.StatusCode+' '+$clock.ElapsedMilliseconds+'ms')}catch{}
+   if($job){Exit-BowerbirdJob -Presence $script:Presence}
+   # Heartbeats arrive every 5 s; log them only when they fail.
+   if(-not $quietRoute -or [int]$res.StatusCode -ne 200){
+    try{$clock.Stop();Write-BowerbirdDiagnostic -Event 'REQUEST' -Route $req.Url.AbsolutePath -RequestId $requestId -Message ('HTTP '+[string]$res.StatusCode+' '+$clock.ElapsedMilliseconds+'ms')}catch{}
+   }
    try{$res.Close()}catch{}
   }
  }
 }finally{
+ # Runs on End session, auto-stop, Ctrl+C and fatal errors alike.
+ Remove-BowerbirdRuntimeFile -Path $script:RuntimeFile
  try{$script:Session.Stop()}catch{}
  try{$script:Session.Close()}catch{}
- Write-BowerbirdDiagnostic -Event 'STOP' -Message 'Service stopped'
+ $reason='Service stopped'
+ if($script:StopReason){$reason='Service stopped ('+$script:StopReason+')'}
+ Write-BowerbirdDiagnostic -Event 'STOP' -Message $reason
 }
+exit 0
