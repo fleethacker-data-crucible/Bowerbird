@@ -12,9 +12,11 @@ No Python, Node, npm, Git executable, or admin-installed package is required on 
 
 A *bower* is a ship's main anchor, the one carried at the bow (sailors call it the best bower). The bowerbird is the bird that collects small treasures and arranges them with care. Bowerbird does the same for your files: it gathers screenshots and documents, works out what they are, and puts them in order.
 
-![Bowerbird Studio File Explorer in the Night watch theme](docs/screenshots/explorer-night-watch.png)
+| Night watch (dark) | Chart room (light) |
+| --- | --- |
+| ![Bowerbird Explorer in the Night watch theme](docs/screenshots/explorer-night-watch.png) | ![Bowerbird Explorer in the Chart room theme](docs/screenshots/explorer-chart-room.png) |
 
-Bowerbird Studio has a single dark theme (Night watch); it does not follow the Windows light/dark setting yet, so there is no Chart room (light) screenshot. The screenshot shows a throwaway folder of invented sample files.
+Studio follows the Windows light/dark setting; the theme button in the sidebar switches between Follow Windows, Night watch and Chart room. The screenshots show a throwaway folder of invented sample files.
 
 ## Start: the GUI, not the legacy CLI
 

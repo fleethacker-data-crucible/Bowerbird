@@ -16,6 +16,8 @@ function record(event,target){
 window.addEventListener('error',e=>{record('CLIENT_ERROR','script_'+(e.filename||'browser').split('/').pop());const n=$('notice');if(n){n.textContent='A browser script error occurred. Open Diagnostics to review the local report.';n.className='error'}});
 window.addEventListener('unhandledrejection',()=>{record('CLIENT_ERROR','unhandled_promise');const n=$('notice');if(n){n.textContent='A browser request failed. Open Diagnostics for details.';n.className='error'}});
 document.addEventListener('click',e=>{const target=e.target&&e.target.closest?e.target.closest('button'):null;if(target){record('CLICK',target.id||target.dataset.view||'button')}},true);
+function engine(name){if(window.BowerbirdShell)window.BowerbirdShell.setEngine(name);else $('connection').textContent=name}
+function glyph(name){return window.BowerbirdIcons?window.BowerbirdIcons.icon(name,16):null}
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=String(text);return n}
 function clear(n){n.replaceChildren()}
 function notify(message,error=false){const n=$('notice');n.textContent=message;n.className=error?'error':''}
@@ -28,9 +30,9 @@ async function api(route,body={}){
 }
 async function run(action,done){try{notify('Working…');const result=await action();notify(done||'Done');return result}catch(err){notify(err.message,true);return null}}
 function size(bytes){if(bytes===null||bytes===undefined)return '—';if(bytes<1024)return bytes+' B';if(bytes<1048576)return (bytes/1024).toFixed(1)+' KB';return (bytes/1048576).toFixed(1)+' MB'}
-function show(view){document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b.dataset.view===view));document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.id==='view-'+view));$('page-title').textContent=({files:'File Explorer',search:'Intelligent Search',insights:'Insights & Agents',duplicates:'Duplicate Detection',organize:'File Organization',rename:'Smart Rename',code:'Code Insights',assistant:'AI Assistant',diagnostics:'Diagnostics & Feedback'})[view];if(window.BowerbirdDiagnostics)window.BowerbirdDiagnostics.page(view);if(view==='diagnostics')return window.BowerbirdDiagnostics?.activate();if(view==='files')return loadFiles();if(view==='insights')return loadInsights()}
+function show(view){document.querySelectorAll('.nav').forEach(b=>{const on=b.dataset.view===view;b.classList.toggle('active',on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.id==='view-'+view));$('page-title').textContent=({files:'File Explorer',search:'Intelligent Search',insights:'Insights & Agents',duplicates:'Duplicate Detection',organize:'File Organization',rename:'Smart Rename',code:'Code Insights',assistant:'AI Assistant',diagnostics:'Diagnostics & Feedback'})[view];if(window.BowerbirdDiagnostics)window.BowerbirdDiagnostics.page(view);if(view==='diagnostics')return window.BowerbirdDiagnostics?.activate();if(view==='files')return loadFiles();if(view==='insights')return loadInsights()}
 document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
-async function loadStatus(){const s=await run(()=>api('status'));if(!s)return;state.status=s;$('connection').textContent='Local server connected';$('workspace').textContent=s.root;$('workspace-current').textContent=s.root;$('workspace-path').value=s.root;$('index-state').textContent=s.indexExists?'Index available':'Not indexed';$('ai-state').textContent=s.cloudAI?'Enabled':'Offline';$('ai-hint').textContent=s.cloudAI?'Streaming connection to configured provider':'Offline assistance · use -AllowCloudAI for approved provider';if(s.indexExists)loadInsights()}
+async function loadStatus(){const s=await run(()=>api('status'));if(!s)return;state.status=s;engine('running');if(s.version)$('app-version').textContent='Bowerbird Studio '+s.version;$('workspace').textContent=s.root;$('workspace-current').textContent=s.root;$('workspace-path').value=s.root;$('index-state').textContent=s.indexExists?'Index available':'Not indexed';$('ai-state').textContent=s.cloudAI?'Enabled':'Offline';$('ai-hint').textContent=s.cloudAI?'Streaming connection to configured provider':'Offline assistance · use -AllowCloudAI for approved provider';if(s.indexExists)loadInsights()}
 function resetForWorkspaceSwitch(){
  state.path='.';
  state.plan=null;state.renamePlan=null;state.selectedFile=null;
@@ -90,8 +92,9 @@ async function loadFiles(){
  const data=await run(()=>api('files',{path:state.path}));if(!data)return;
  $('cwd').textContent=data.path;$('file-count').textContent=data.items.length;const tbody=$('file-table');clear(tbody);
  for(const item of data.items){
-  const tr=el('tr');const td=el('td','name-cell',(item.directory?'▣  ':'▤  ')+item.name);if(item.directory)td.classList.add('folder');tr.append(td,el('td','',item.directory?'Folder':item.extension||'File'),el('td','',size(item.size)),el('td','',new Date(item.modified).toLocaleString()));
-  tr.addEventListener('click',()=>{if(window.BowerbirdDiagnostics)window.BowerbirdDiagnostics.event('FILE_SELECTED',{target:item.directory?'open-folder':'preview-file'});return item.directory?openFolder(item.path):preview(item.path)});tbody.append(tr)
+  const tr=el('tr');tr.tabIndex=0;const td=el('td','name-cell');const icon=glyph(item.directory?'folder':'file');if(icon)td.append(icon);td.append(el('span','',item.name));if(item.directory)td.classList.add('folder');tr.append(td,el('td','',item.directory?'Folder':item.extension||'File'),el('td','num',size(item.size)),el('td','',new Date(item.modified).toLocaleString()));
+  const open=()=>{if(window.BowerbirdDiagnostics)window.BowerbirdDiagnostics.event('FILE_SELECTED',{target:item.directory?'open-folder':'preview-file'});return item.directory?openFolder(item.path):preview(item.path)};
+  tr.addEventListener('click',open);tr.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open()}});tbody.append(tr)
  }
  if(!data.items.length){const tr=el('tr');const td=el('td','','Folder is empty');td.colSpan=4;tr.append(td);tbody.append(tr)}
 }
@@ -237,12 +240,13 @@ function showSessionEnded(detail){
  const panel=$('session-ended');
  if(detail)$('session-ended-detail').textContent=detail;
  panel.hidden=false;
+ engine('stopped');
  document.querySelector('.shell').setAttribute('aria-hidden','true');
 }
 if(window.BowerbirdLifecycle){
  // The tab owns the server: heartbeats keep it alive, closing the tab lets it stop itself.
  window.BowerbirdLifecycle.start(state.token);
- window.BowerbirdLifecycle.onServerGone=()=>{const c=$('connection');if(c)c.textContent='Local server not responding'};
+ window.BowerbirdLifecycle.onServerGone=()=>engine('disconnected');
 }
 $('end-session').addEventListener('click',async()=>{
  if(!window.BowerbirdLifecycle)return;
