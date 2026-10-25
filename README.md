@@ -28,6 +28,21 @@ To start the server without opening a browser:
 
 Copy the Session URL from PowerShell into your browser. It contains a private ephemeral token; don't share it in logs or screenshots. If automatic browser opening is blocked, the backend remains available and prints the manual session URL.
 
+### Stopping Studio
+
+The browser tab owns the server. Close the tab and the PowerShell server stops itself (5 seconds after the tab leaves, or 20 seconds after the last heartbeat if the browser crashed). A reload or a second open tab keeps it running, and it never stops while a request such as indexing, apply or AI is still running.
+
+- **End session** at the bottom of the sidebar stops the server now.
+- `Stop-Bowerbird.ps1` stops every running Studio from a shell, including a hidden or forgotten window. No PID needed.
+- Starting Studio while one is already running asks *Stop it and start fresh?* `--replace` (or `-Replace`) answers yes without asking.
+- `--stay` (or `-Stay`) keeps the server running after the tab closes. `BOWERBIRD_AUTO_STOP=0`, as an environment variable or in `Config\bowerbird.env`, does the same for every launch.
+
+    Start-Bowerbird.bat --stay
+    Start-Bowerbird.bat --replace
+    powershell.exe -NoProfile -File .\Stop-Bowerbird.ps1
+
+Each running server writes `%LOCALAPPDATA%\Bowerbird\Logs\bowerbird-server-<pid>.json` (pid, port, URL and start time; never the session token) and deletes it when it stops. Those files are how the launcher and `Stop-Bowerbird.ps1` find it; files left by a crashed server are removed the next time either one runs. `-NoBrowser` sessions never auto-stop until a browser tab has connected.
+
 ### Change the scan folder inside the GUI
 
 You no longer have to restart PowerShell or use the command line to select a new folder:
@@ -132,6 +147,7 @@ The default CLI behavior is preview-only and offline. Use cloud vision only on d
 
 ```powershell
 powershell.exe -NoProfile -File .\Tests\Smoke.ps1
+powershell.exe -NoProfile -File .\Tests\Lifecycle.ps1
 powershell.exe -NoProfile -File .\Tests\StudioIntegration.ps1
 ```
 
