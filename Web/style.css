@@ -42,7 +42,7 @@
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 @media(max-width:850px){.workspace-form{flex-wrap:wrap}.workspace-form input{width:100%;flex-basis:100%}.workspace-form button{flex:1}}
 
-/* Diagnostics & Feedback: dedicated tab based on Cascade's session recorder */
+/* Diagnostics & Feedback: dedicated tab based on Halyard's session recorder */
 .diagnostics-intro{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}
 .diagnostics-intro h2{font-size:23px;margin:3px 0}.diagnostics-intro p{margin:5px 0 0;max-width:720px}
 .diag-stats article{min-height:93px}

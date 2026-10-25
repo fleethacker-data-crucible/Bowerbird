@@ -1,5 +1,5 @@
 #requires -Version 5.1
-# Pure PowerShell 5.1 loopback server, based on ARC/Cascade transport.
+# Pure PowerShell 5.1 loopback server, based on Lazarette/Halyard transport.
 # No HttpListener URLACL, Add-Type, C# compiler, or admin rights required.
 function Start-BowerbirdLoopback {
  [CmdletBinding()]param([ValidateRange(0,65535)][int]$Port=8767,[switch]$FixedPort)

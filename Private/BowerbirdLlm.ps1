@@ -43,7 +43,7 @@ function Get-BowerbirdLlmToken {
   try{$plain=[Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr);if($plain){Set-Item -Path "Env:$envTarget" -Value $plain.Trim();return $plain.Trim()}}
   finally{[Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)}
  }
- throw "No LLM token for profile $ForProfile. Configure ARC or $envTarget."
+ throw "No LLM token for profile $ForProfile. Configure Lazarette or $envTarget."
 }
 function Invoke-BowerbirdChat {
  [CmdletBinding()]param([Parameter(Mandatory)][object[]]$Messages,[ValidateSet('Auto','Grok','GenAi')][string]$Profile='Auto',[string]$Model,[int]$MaxTokens=1024,[double]$Temperature=0.15,[int]$TimeoutSec=180)
