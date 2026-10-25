@@ -1,6 +1,6 @@
 # Bowerbird Diagnostics & Feedback
 
-This capability adapts Cascade's local session recorder, error logging, and support-bundle workflow to Bowerbird Studio. It runs without Python, Node, npm, an installed web server, external telemetry, or a cloud account.
+This capability adapts Halyard's local session recorder, error logging, and support-bundle workflow to Bowerbird Studio. It runs without Python, Node, npm, an installed web server, external telemetry, or a cloud account.
 
 ## Record a reproducible problem
 

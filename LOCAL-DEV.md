@@ -20,4 +20,4 @@ git switch feature/local-dev-no-cac-launcher
 
 The original production launcher and authentication checks remain unchanged. Mock, local, or offline sessions are **not** authenticated Navy sessions, and must not contain CUI, real credentials, classified material, or production personal data.
 
-When stable, remove `Launch-LocalDev.bat` (and the ARC mock files where applicable) from the release branch. Do not deploy them as a means of avoiding CAC or authorization for live systems.
+When stable, remove `Launch-LocalDev.bat` (and the Lazarette mock files where applicable) from the release branch. Do not deploy them as a means of avoiding CAC or authorization for live systems.
