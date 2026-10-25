@@ -118,7 +118,7 @@ If the GUI will not launch at all, run `Start-Bowerbird.bat diagnostics`. See [D
 | Journaling | Per-step durable journal, archive of previous runs, source hash preconditions and checked undo |
 | Insights | Category inventory, indexed bytes, duplicate groups, extraction failures |
 | Local Agents | Read-only organization, duplication, and index-quality analysis; usable without cloud AI |
-| AI Chat | Optional Arc/GenAI/Grok integration, streamed browser output when provider supports SSE; fallback JSON responses |
+| AI Chat | Optional Lazarette/GenAI/Grok integration, streamed browser output when provider supports SSE; fallback JSON responses |
 | Code Insights | Language and line statistics by extension |
 | Diagnostics & Feedback | Halyard-style session recorder, automatic browser/API errors, local issue reporting and resolution, request IDs, health checks, redacted support export |\n| Tests | Windows PowerShell parser check, JavaScript/DOM contract tests, smoke and real localhost HTTP API tests on both transports |
 
