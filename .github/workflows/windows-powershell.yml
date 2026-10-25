@@ -37,6 +37,8 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             node --check Web/diagnostics.js
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            node --check Web/lifecycle.js
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             node Tests/UiContract.js
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
@@ -46,6 +48,9 @@ jobs:
       - name: Intelligence engine smoke test
         shell: powershell
         run: .\Tests\Smoke.ps1
+      - name: Lifecycle presence rule and runtime files
+        shell: powershell
+        run: .\Tests\Lifecycle.ps1
       - name: Studio HTTP.sys integration
         shell: powershell
         run: .\Tests\StudioIntegration.ps1 -Transport HttpListener
