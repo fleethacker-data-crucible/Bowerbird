@@ -5,6 +5,10 @@ cd /d "%APP%" || (echo [Bowerbird] Cannot access the application folder. & pause
 where powershell.exe >nul 2>&1 || (echo [Bowerbird] Windows PowerShell 5.1 is required. & pause & exit /b 1)
 REM Standard GUI launcher modeled on ARC/Cascade: STA, NoProfile, process-scoped policy.
 REM It does not override Group Policy, AppLocker, WDAC or organizational controls.
+REM Studio stops itself when its browser tab closes. Options pass through:
+REM   --stay     keep the server running after the tab closes
+REM   --replace  stop an already running Studio without asking
+REM Stop-Bowerbird.ps1 stops every running Studio from a shell.
 if /I "%~1"=="diagnostics" goto DIAGNOSTICS
 if /I "%~1"=="check" goto DIAGNOSTICS
 if /I "%~1"=="--diagnostics" goto DIAGNOSTICS

@@ -16,6 +16,7 @@
    <button class="nav" data-view="code">⌘ <span>Code Insights</span></button>
    <button class="nav" data-view="assistant">✧ <span>AI Assistant</span></button>
    <button class="nav" data-view="diagnostics">☷ <span>Diagnostics &amp; Feedback</span></button>
+   <button id="end-session" class="nav-end" type="button" title="Stop the local Bowerbird server and close this session">⏻ <span>End session</span></button>
   </nav>
   <div class="sidebar-bottom"><div class="status-dot"></div><span id="connection">Connecting…</span><small id="workspace">Local workspace</small></div>
  </aside>
@@ -163,4 +164,6 @@
    </div>
   </section>
  </main>
-</div><script src="/diagnostics.js" defer></script><script src="/app.js" defer></script></body></html>
+</div>
+<section id="session-ended" class="session-ended" hidden aria-live="polite"><div class="panel"><span class="eyebrow">SESSION ENDED</span><h1>Bowerbird Studio has stopped</h1><p class="muted" id="session-ended-detail">The local server is no longer running. You can close this tab.</p><p class="muted">To continue, run Start-Bowerbird.bat again.</p></div></section>
+<script src="/lifecycle.js" defer></script><script src="/diagnostics.js" defer></script><script src="/app.js" defer></script></body></html>

@@ -233,4 +233,25 @@ async function streamAi(payload,onText){
 }
 
 $('diagnostics').addEventListener('click',()=>show('diagnostics'));
+function showSessionEnded(detail){
+ const panel=$('session-ended');
+ if(detail)$('session-ended-detail').textContent=detail;
+ panel.hidden=false;
+ document.querySelector('.shell').setAttribute('aria-hidden','true');
+}
+if(window.BowerbirdLifecycle){
+ // The tab owns the server: heartbeats keep it alive, closing the tab lets it stop itself.
+ window.BowerbirdLifecycle.start(state.token);
+ window.BowerbirdLifecycle.onServerGone=()=>{const c=$('connection');if(c)c.textContent='Local server not responding'};
+}
+$('end-session').addEventListener('click',async()=>{
+ if(!window.BowerbirdLifecycle)return;
+ if(!window.confirm('End this Bowerbird session? The local server stops; run Start-Bowerbird.bat to start again.'))return;
+ const button=$('end-session');
+ button.disabled=true;
+ try{
+  await window.BowerbirdLifecycle.endSession();
+  showSessionEnded('The local server has stopped. You can close this tab.');
+ }catch(err){notify(err.message,true);button.disabled=false}
+});
 loadStatus().then(()=>{record('READY','browser_ui');return loadFiles()}).catch(err=>notify('Initialization failed: '+err.message,true));
