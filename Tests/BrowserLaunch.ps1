@@ -11,7 +11,9 @@ $child=$null;$edge=$null
 function Assert([bool]$Value,[string]$Reason){if(-not $Value){throw ('GUI LAUNCH TEST: '+$Reason)}}
 try{
  [IO.File]::WriteAllText((Join-Path $temp 'BowerbirdGuiProbe.txt'),'Bowerbird GUI integration test')
- $cmd='""'+$launcher+'" -Root "'+$temp+'" -Port 0 -NoBrowser"'
+ # --stay: several headless Edge sessions open and close this one server below, which would
+ # otherwise stop itself when the first tab closes. It also proves the BAT passes --options through.
+ $cmd='""'+$launcher+'" -Root "'+$temp+'" -Port 0 -NoBrowser --stay"'
  $child=Start-Process -FilePath $env:ComSpec -ArgumentList @('/d','/c',$cmd) -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
  $session=''
  for($i=0;$i -lt 80;$i++){
@@ -71,6 +73,18 @@ try{
   }else{Write-Host 'SKIP: Edge not present; launcher + HTTP integration checks passed' -ForegroundColor Yellow}
  }
  Write-Host 'PASS: Start-Bowerbird.bat launched Studio and served authenticated browser/API responses' -ForegroundColor Green
+ # --stay kept the server alive after the browser tabs closed; Stop-Bowerbird.ps1 must find and stop it without a PID.
+ . (Join-Path $repo 'Private\BowerbirdLifecycle.ps1')
+ $mine=@(Get-BowerbirdProcesses|Where-Object {$_.Port -eq $site.Port})
+ Assert ($mine.Count -eq 1) 'Runtime file lists the launched server'
+ $presence=Invoke-RestMethod -Uri ($site.GetLeftPart([UriPartial]::Authority)+'/api/heartbeat') -Method Post -ContentType 'application/json' -Headers @{'X-Bowerbird-Token'=$token} -Body '{"tab":"launch-test"}' -TimeoutSec 15
+ Assert (-not $presence.autoStop) '--stay passed through the BAT launcher turns auto-stop off'
+ $stopOutput=& powershell.exe -NoProfile -NonInteractive -File (Join-Path $repo 'Stop-Bowerbird.ps1') -Port $site.Port 2>&1|Out-String
+ Write-Host $stopOutput.Trim()
+ Assert ($stopOutput -match ('Stopped PID '+$mine[0].Pid)) 'Stop-Bowerbird.ps1 reports the PID it stopped'
+ Assert (-not (Get-Process -Id $mine[0].Pid -ErrorAction SilentlyContinue)) 'Stop-Bowerbird.ps1 stopped the server'
+ Assert (-not (Test-Path -LiteralPath $mine[0].RuntimeFile)) 'Stop-Bowerbird.ps1 removed the runtime file'
+ Write-Host 'PASS: --stay pass-through and Stop-Bowerbird.ps1 stopped the running server' -ForegroundColor Green
 }catch{
  Write-Host ('FAIL: '+$_.Exception.Message) -ForegroundColor Red
  if(Test-Path -LiteralPath $stderr){Write-Host (Get-Content -LiteralPath $stderr -Raw -ErrorAction SilentlyContinue)}

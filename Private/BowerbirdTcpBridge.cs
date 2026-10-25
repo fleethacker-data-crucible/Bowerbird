@@ -151,6 +151,21 @@ namespace Bowerbird.Transport {
     Response=new Response(client)
    };
   }
+  // Waits up to timeoutMilliseconds for a request; returns null when none arrived, so the
+  // PowerShell loop can run its presence check (browser gone -> stop) between requests.
+  public Context TryGetContext(int timeoutMilliseconds){
+   if(!IsListening)throw new InvalidOperationException("Server not listening");
+   DateTime deadline=DateTime.UtcNow.AddMilliseconds(timeoutMilliseconds);
+   while(true){
+    while(!listener.Pending()){
+     if(DateTime.UtcNow>=deadline)return null;
+     System.Threading.Thread.Sleep(25);
+    }
+    TcpClient client=listener.AcceptTcpClient();
+    try{return Parse(client);}
+    catch{client.Close();}
+   }
+  }
   public Context GetContext(){
    if(!IsListening)throw new InvalidOperationException("Server not listening");
    while(true){

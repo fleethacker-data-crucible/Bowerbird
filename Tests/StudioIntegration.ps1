@@ -28,6 +28,7 @@ try{
  }
  $arguments="-NoProfile -NonInteractive -File ""$server"" -Root ""$work"" -Port $port -NoBrowser -Transport $Transport"
  $process=Start-Process -FilePath 'powershell.exe' -ArgumentList $arguments -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+ $null=$process.Handle # keep the handle so ExitCode is available after the server stops itself
  $session=$null
  for($attempt=0;$attempt -lt 60;$attempt++){
   Start-Sleep -Milliseconds 300
@@ -174,6 +175,50 @@ try{
  $blocked=$false
  try{$null=Call 'stream' @{prompt='hello'}}catch{$blocked=$true}
  Assert $blocked 'Cloud requests should be disabled'
+ # Lifecycle: runtime file, heartbeat auth (header, or token in the body for the beacon only), and
+ # the server stopping itself once the tab is gone (or from End session in the collision run).
+ $runtimeDir=Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'Bowerbird\Logs'
+ $runtimeFile=Join-Path $runtimeDir ('bowerbird-server-'+$process.Id+'.json')
+ Assert (Test-Path -LiteralPath $runtimeFile) 'Runtime file written for the server pid'
+ $runtimeText=Get-Content -LiteralPath $runtimeFile -Raw
+ $runtime=$runtimeText|ConvertFrom-Json
+ Assert ($runtime.pid -eq $process.Id -and $runtime.port -eq $port -and $runtime.url -eq $site -and $runtime.startedAt) 'Runtime file has pid, port, url and start time'
+ Assert ($runtimeText -notmatch [regex]::Escape($token)) 'Runtime file never contains the session token'
+ function Beat($value,$extraHeaders){
+  $h=@{};if($extraHeaders){foreach($k in $extraHeaders.Keys){$h[$k]=$extraHeaders[$k]}}
+  try{
+   $r=Invoke-WebRequest -Method Post -Uri ($base+'heartbeat') -Headers $h -UseBasicParsing -ContentType 'application/json' -Body (ConvertTo-Json -InputObject $value -Compress) -TimeoutSec 15
+   return [int]$r.StatusCode
+  }catch{if($_.Exception.Response){return [int]$_.Exception.Response.StatusCode};throw}
+ }
+ Assert ((Beat @{tab='itest';leaving=$false} $null) -eq 403) 'Heartbeat without a token is rejected'
+ Assert ((Beat @{tab='itest';leaving=$true;session='wrong'} $null) -eq 403) 'Beacon with a wrong body token is rejected'
+ Assert ((Beat @{tab='itest';leaving=$false} @{'X-Bowerbird-Token'=$token;Origin='http://evil.example'}) -eq 403) 'Heartbeat from another origin is rejected'
+ Assert ((Beat @{tab='itest';leaving=$false} $headers) -eq 200) 'Heartbeat with the session header'
+ $presence=Call 'heartbeat' @{tab='itest';leaving=$false}
+ Assert ($presence.autoStop -and $presence.alive -eq 1 -and $presence.timeoutSeconds -eq 20) 'Presence state reports one live tab with auto-stop on'
+ $blocked=$false
+ try{$null=Invoke-RestMethod -Method Post -Uri ($base+'status') -ContentType 'application/json' -Body (@{session=$token}|ConvertTo-Json -Compress) -TimeoutSec 15}catch{$blocked=$true}
+ Assert $blocked 'The body token is accepted on the heartbeat route only'
+ $blocked=$false
+ try{$null=Call 'session/stop' @{}}catch{$blocked=$true}
+ Assert $blocked 'End session requires the End session intent header'
+ Assert (-not $process.HasExited) 'Server still running before the tab leaves'
+ if($SimulateCollision){
+  $ended=Invoke-RestMethod -Method Post -Uri ($base+'session/stop') -Headers @{'X-Bowerbird-Token'=$token;'X-Bowerbird-Intent'='end-session'} -ContentType 'application/json' -Body '{}' -TimeoutSec 15
+  Assert ($ended.ok -and $ended.stopping) 'End session acknowledged'
+  $how='End session'
+ }else{
+  # The pagehide beacon: no headers, token in the body. Expect a stop about 5 s later.
+  Assert ((Beat @{tab='itest';leaving=$true;session=$token} $null) -eq 200) 'Leaving beacon with the token in the body'
+  Start-Sleep -Seconds 2
+  Assert (-not $process.HasExited) 'Inside the 5 s leaving grace the server keeps running'
+  $how='leaving beacon'
+ }
+ if(-not $process.WaitForExit(15000)){throw ('Server did not stop itself after the '+$how)}
+ Assert ($process.ExitCode -eq 0) ('Server exits cleanly after the '+$how)
+ Assert (-not (Test-Path -LiteralPath $runtimeFile)) 'Runtime file deleted on stop'
+ Write-Host "PASS: Lifecycle heartbeat auth, runtime file and stop after the $how" -ForegroundColor Green
  Write-Host "PASS: Bowerbird Studio browser+API integration ($Transport, collision=$SimulateCollision, port=$port)" -ForegroundColor Green
 }catch{
  Write-Host ('FAIL: '+$_.Exception.Message) -ForegroundColor Red
