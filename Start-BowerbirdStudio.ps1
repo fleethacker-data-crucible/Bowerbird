@@ -97,7 +97,7 @@ Write-BowerbirdDiagnostic -Event 'BOOT' -Message 'Starting Bowerbird Studio.'
 . (Join-Path $AppRoot 'Private\BowerbirdRenameStudio.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdActions.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdLlm.ps1')
-. (Join-Path $AppRoot 'Private\ArcBridge.ps1')
+. (Join-Path $AppRoot 'Private\LazaretteBridge.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdLoopback.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdWorkspace.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdSupport.ps1')
