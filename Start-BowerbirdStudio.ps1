@@ -136,7 +136,7 @@ $script:Session=$null
 $script:PureTcp=$false
 $script:PortRequested=$Port
 if($Transport -in @('Auto','Tcp')){
- # Default to ARC/Cascade-style pure PowerShell sockets. Never compile C# or
+ # Default to Lazarette/Halyard-style pure PowerShell sockets. Never compile C# or
  # request an HTTP.sys URL reservation on the normal startup path.
  $binding=Start-BowerbirdLoopback -Port $Port -FixedPort:$FixedPort
  $script:Session=$binding.Listener
