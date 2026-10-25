@@ -55,7 +55,8 @@
  window.fetch=function(resource,options){
   let pathname='';
   try{pathname=new URL(typeof resource==='string'?resource:resource.url,location.href).pathname}catch{}
-  const monitored=pathname.startsWith('/api/')&&pathname!=='/api/client-event';
+  // Heartbeats run every 5 s; recording them would bury the user's own actions.
+  const monitored=pathname.startsWith('/api/')&&pathname!=='/api/client-event'&&pathname!=='/api/heartbeat';
   const started=monitored?Date.now():0;
   return nativeFetch(resource,options).then(response=>{
    if(monitored){
