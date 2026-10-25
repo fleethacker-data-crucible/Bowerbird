@@ -20,8 +20,17 @@ function Start-BowerbirdLoopback {
  throw 'No available loopback port'
 }
 function Read-BowerbirdLoopbackContext {
- [CmdletBinding()]param([Parameter(Mandatory)][Net.Sockets.TcpListener]$Listener,[ValidateRange(1,65535)][int]$Port)
+ # -TimeoutMilliseconds returns $null when no request arrived in time, so the caller can run its
+ # presence check between requests; polling Pending() also lets Ctrl+C reach the finally block.
+ [CmdletBinding()]param([Parameter(Mandatory)][Net.Sockets.TcpListener]$Listener,[ValidateRange(1,65535)][int]$Port,[int]$TimeoutMilliseconds=-1)
+ $deadline=if($TimeoutMilliseconds -ge 0){[DateTime]::UtcNow.AddMilliseconds($TimeoutMilliseconds)}else{[DateTime]::MaxValue}
  while($true){
+  if($TimeoutMilliseconds -ge 0){
+   while(-not $Listener.Pending()){
+    if([DateTime]::UtcNow -ge $deadline){return $null}
+    Start-Sleep -Milliseconds 25
+   }
+  }
   $client=$Listener.AcceptTcpClient()
   try{
    $client.ReceiveTimeout=15000;$client.SendTimeout=180000

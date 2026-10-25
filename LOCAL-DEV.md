@@ -7,6 +7,7 @@ Run `Launch-LocalDev.bat` from this repository on your **personal Windows PC** a
 - Prerequisite: Windows PowerShell 5.1.
 - Startup: Uses an isolated %TEMP%\Bowerbird-LocalDev workspace and defaults to local-only intelligence. Make and delete test files there.
 - Boundary: Selecting production data or enabling AI explicitly is outside this safe launcher. Do not enable cloud AI for sensitive files.
+- Lifecycle: the launcher first runs `Stop-Bowerbird.ps1` and prints any server it stopped, so an old Studio never holds the port or serves stale code. Closing the tab stops the dev server; pass `--stay` to keep it running.
 - Diagnostics / manual check: `powershell.exe -NoProfile -File Start-BowerbirdStudio.ps1 -Root "$env:TEMP\Bowerbird-LocalDev"`.
 
 ## Workflow
