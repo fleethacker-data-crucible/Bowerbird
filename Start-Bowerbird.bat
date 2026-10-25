@@ -3,7 +3,7 @@ setlocal EnableExtensions DisableDelayedExpansion
 set "APP=%~dp0"
 cd /d "%APP%" || (echo [Bowerbird] Cannot access the application folder. & pause & exit /b 1)
 where powershell.exe >nul 2>&1 || (echo [Bowerbird] Windows PowerShell 5.1 is required. & pause & exit /b 1)
-REM Standard GUI launcher modeled on ARC/Cascade: STA, NoProfile, process-scoped policy.
+REM Standard GUI launcher modeled on Lazarette/Halyard: STA, NoProfile, process-scoped policy.
 REM It does not override Group Policy, AppLocker, WDAC or organizational controls.
 if /I "%~1"=="diagnostics" goto DIAGNOSTICS
 if /I "%~1"=="check" goto DIAGNOSTICS

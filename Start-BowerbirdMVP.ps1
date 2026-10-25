@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Bowerbird MVP – intelligent image / screenshot renamer (PowerShell + ARC + GenAi/Grok vision)
+  Bowerbird MVP – intelligent image / screenshot renamer (PowerShell + Lazarette + GenAi/Grok vision)
 .DESCRIPTION
   Two-pass organizer: filename and metadata first, optional vision LLM second.
   Default is dry-run. Use -Apply to rename.
@@ -58,7 +58,7 @@ try{
  }
  try{$null=Import-BowerbirdArcSession -Quiet}catch{}
  Write-Host '';Write-Host '=== Bowerbird MVP ===' -ForegroundColor Cyan
- Write-Host 'Intelligent screenshot & image renamer (PowerShell + ARC + vision)' -ForegroundColor DarkGray
+ Write-Host 'Intelligent screenshot & image renamer (PowerShell + Lazarette + vision)' -ForegroundColor DarkGray
  if($Undo){
   if(-not $AuditLogPath){
    $latest=Get-ChildItem (Join-Path $Root 'Logs') -Filter 'bowerbird-audit_*.json' -ErrorAction SilentlyContinue|Sort-Object LastWriteTime -Descending|Select-Object -First 1
