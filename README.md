@@ -1,14 +1,20 @@
+<p align="center"><img src="assets/brand/emblem-light.png" width="280" alt="Bowerbird"></p>
+
 # Bowerbird Studio
 
 **Local-first file intelligence and screenshot renaming for Windows PowerShell 5.1 and your existing web browser.**
 
-[Windows PowerShell CI](https://github.com/ashable2/bowerbird/actions/workflows/windows-powershell.yml) · [Source](https://github.com/ashable2/bowerbird/tree/main)
+[Windows PowerShell CI](https://github.com/sun-of-anton/bowerbird/actions/workflows/windows-powershell.yml) · [Source](https://github.com/sun-of-anton/bowerbird/tree/main)
 
 No Python, Node, npm, Git executable, or admin-installed package is required on the target workstation. The development pipeline uses Node only to check syntax on GitHub-hosted Windows runners.
 
+## The name
+
+A *bower* is a ship's main anchor, the one carried at the bow (sailors call it the best bower). The bowerbird is the bird that collects small treasures and arranges them with care. Bowerbird does the same for your files: it gathers screenshots and documents, works out what they are, and puts them in order.
+
 ## Start: the GUI, not the legacy CLI
 
-**Double-click Start-Bowerbird.bat**. This is the supported GUI launcher, modeled on ARC/Cascade's PowerShell 5.1 -STA, -NoProfile, process-scoped execution settings and browser-native architecture. It opens **Bowerbird Studio**, not the old renamer.
+**Double-click Start-Bowerbird.bat**. This is the supported GUI launcher, modeled on Lazarette/Halyard's PowerShell 5.1 -STA, -NoProfile, process-scoped execution settings and browser-native architecture. It opens **Bowerbird Studio**, not the old renamer.
 
 The second and only other BAT launcher is Start-Bowerbird-Console.bat for the original screenshot-renaming CLI.
 
@@ -43,7 +49,7 @@ The native picker uses the built-in Windows Forms folder dialog from the current
 
 ### Ports and workstation compatibility
 
-Normal startup uses **pure Windows PowerShell 5.1 with .NET TcpListener on 127.0.0.1**. No C# compilation, HTTP.sys URL reservation, administrator privileges, Node, Python, or external web-server installation is required. It prefers local port **8767**, and when another app owns that port, binds an available OS-assigned port and prints/opens the actual URL. This follows ARC's auto-port approach.
+Normal startup uses **pure Windows PowerShell 5.1 with .NET TcpListener on 127.0.0.1**. No C# compilation, HTTP.sys URL reservation, administrator privileges, Node, Python, or external web-server installation is required. It prefers local port **8767**, and when another app owns that port, binds an available OS-assigned port and prints/opens the actual URL. This follows Lazarette's auto-port approach.
 
     Start-Bowerbird.bat -Port 8800
 
@@ -63,7 +69,7 @@ Those paths avoid writing to a possibly read-only installation folder. Logs omit
 
 Run Start-Bowerbird.bat diagnostics when the GUI doesn't start. It checks required files, PowerShell parsing, a local loopback socket, state-folder writability, and effective policy without changing policy.
 
-## Diagnostics & Feedback (from Cascade)
+## Diagnostics & Feedback (from Halyard)
 
 Open **Diagnostics & Feedback** in the left sidebar (or the Diagnostics shortcut in the top bar).
 
@@ -99,7 +105,7 @@ If the GUI will not launch at all, run `Start-Bowerbird.bat diagnostics`. See [D
 | Local Agents | Read-only organization, duplication, and index-quality analysis; usable without cloud AI |
 | AI Chat | Optional Arc/GenAI/Grok integration, streamed browser output when provider supports SSE; fallback JSON responses |
 | Code Insights | Language and line statistics by extension |
-| Diagnostics & Feedback | Cascade-style session recorder, automatic browser/API errors, local issue reporting and resolution, request IDs, health checks, redacted support export |\n| Tests | Windows PowerShell parser check, JavaScript/DOM contract tests, smoke and real localhost HTTP API tests on both transports |
+| Diagnostics & Feedback | Halyard-style session recorder, automatic browser/API errors, local issue reporting and resolution, request IDs, health checks, redacted support export |\n| Tests | Windows PowerShell parser check, JavaScript/DOM contract tests, smoke and real localhost HTTP API tests on both transports |
 
 ### Important implementation distinctions
 
