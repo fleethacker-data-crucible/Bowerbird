@@ -1,4 +1,9 @@
-<p align="center"><img src="assets/brand/emblem-light.png" width="280" alt="Bowerbird"></p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/emblem-dark.png">
+    <img src="assets/brand/emblem-light.png" width="280" alt="Bowerbird emblem: a blue bowerbird perched on an anchor among collected blue treasures, inside a brass compass ring">
+  </picture>
+</p>
 
 # Bowerbird Studio
 
