@@ -22,19 +22,18 @@ function Get-BowerbirdLlmConfig {
 function Get-BowerbirdLlmToken {
  [CmdletBinding()]param([ValidateSet('Auto','Grok','GenAi')][string]$ForProfile='Auto',[switch]$AllowPrompt)
  if($ForProfile -eq 'Auto'){$ForProfile=(Get-BowerbirdLlmConfig).Profile}
- if($ForProfile -eq 'GenAi'){$envTarget='GENAI_TOKEN';$defaultArcItem='genapi';$rememberKey='BOWERBIRD_ARC_ITEM_GenAi'}
- else{$envTarget='DATABRICKS_TOKEN';$defaultArcItem='advana-api';$rememberKey='BOWERBIRD_ARC_ITEM_Grok'}
+ if($ForProfile -eq 'GenAi'){$envTarget='GENAI_TOKEN';$defaultItem='genapi';$itemKeys=@('BOWERBIRD_LAZARETTE_ITEM_GenAi','BOWERBIRD_ARC_ITEM_GenAi','HALYARD_LAZARETTE_ITEM_GenAi','HALYARD_LAZARETTE_ITEM_Llm','CASCADE_ARC_ITEM_GenAi','CASCADE_ARC_ITEM_Llm')}
+ else{$envTarget='DATABRICKS_TOKEN';$defaultItem='advana-api';$itemKeys=@('BOWERBIRD_LAZARETTE_ITEM_Grok','BOWERBIRD_ARC_ITEM_Grok','HALYARD_LAZARETTE_ITEM_Grok','CASCADE_ARC_ITEM_Grok')}
  $existing=[Environment]::GetEnvironmentVariable($envTarget);if(-not [string]::IsNullOrWhiteSpace($existing)){return $existing.Trim()}
  if(-not [string]::IsNullOrWhiteSpace($env:LLM_TOKEN)){return $env:LLM_TOKEN.Trim()}
- $arcItem=[Environment]::GetEnvironmentVariable($rememberKey)
- if([string]::IsNullOrWhiteSpace($arcItem)){
-  if($ForProfile -eq 'GenAi'){$arcItem=$env:CASCADE_ARC_ITEM_GenAi;if(-not $arcItem){$arcItem=$env:CASCADE_ARC_ITEM_Llm}}
-  else{$arcItem=$env:CASCADE_ARC_ITEM_Grok}
- }
- if(-not $arcItem){$arcItem=$defaultArcItem}
- if(Get-Command Import-BowerbirdArcSession -ErrorAction SilentlyContinue){$null=Import-BowerbirdArcSession -Quiet}
- if(Get-Command Get-BowerbirdArcSecretByName -ErrorAction SilentlyContinue){
-  try{$got=Get-BowerbirdArcSecretByName -ServiceName $arcItem;if(-not [string]::IsNullOrWhiteSpace($got)){$plain=[string]$got.Trim();Set-Item -Path "Env:$envTarget" -Value $plain;return $plain}}catch{Write-Verbose $_.Exception.Message}
+ # Vault item name: Bowerbird's own name first (then its former BOWERBIRD_ARC_ITEM_* name), then
+ # Halyard's shared HALYARD_LAZARETTE_ITEM_* (then its former CASCADE_ARC_ITEM_*), else the canonical item.
+ $lazaretteItem=$null
+ foreach($k in $itemKeys){$v=[Environment]::GetEnvironmentVariable($k);if(-not [string]::IsNullOrWhiteSpace($v)){$lazaretteItem=$v.Trim();break}}
+ if(-not $lazaretteItem){$lazaretteItem=$defaultItem}
+ if(Get-Command Import-BowerbirdLazaretteSession -ErrorAction SilentlyContinue){$null=Import-BowerbirdLazaretteSession -Quiet}
+ if(Get-Command Get-BowerbirdLazaretteSecretByName -ErrorAction SilentlyContinue){
+  try{$got=Get-BowerbirdLazaretteSecretByName -ServiceName $lazaretteItem;if(-not [string]::IsNullOrWhiteSpace($got)){$plain=[string]$got.Trim();Set-Item -Path "Env:$envTarget" -Value $plain;return $plain}}catch{Write-Verbose $_.Exception.Message}
  }
  if($AllowPrompt -and [Environment]::UserInteractive){
   $secure=Read-Host 'Token' -AsSecureString

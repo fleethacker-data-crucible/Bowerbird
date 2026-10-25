@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Bowerbird MVP – intelligent image / screenshot renamer (PowerShell + Lazarette + GenAi/Grok vision)
+  Bowerbird MVP - intelligent image / screenshot renamer (PowerShell + Lazarette + GenAi/Grok vision)
 .DESCRIPTION
   Two-pass organizer: filename and metadata first, optional vision LLM second.
   Default is dry-run. Use -Apply to rename.
@@ -48,7 +48,7 @@ try{
  }
  if($env:BOWERBIRD_LLM_PROFILE -and $Profile -eq 'Auto'){$Profile=$env:BOWERBIRD_LLM_PROFILE}
  $scripts=@(
-  'Private\ArcBridge.ps1','Private\BowerbirdLogging.ps1','Private\BowerbirdLlm.ps1',
+  'Private\LazaretteBridge.ps1','Private\BowerbirdLogging.ps1','Private\BowerbirdLlm.ps1',
   'Private\Get-ImageMetadata.ps1','Private\BowerbirdPass1.ps1','Private\BowerbirdPass2.ps1',
   'Private\BowerbirdNamer.ps1','Private\BowerbirdRenamer.ps1','Public\Invoke-BowerbirdOrganize.ps1'
  )
@@ -56,7 +56,7 @@ try{
   $fullPath=Join-Path $Root $script
   if(Test-Path $fullPath){. $fullPath}else{throw "Missing required script: $script"}
  }
- try{$null=Import-BowerbirdArcSession -Quiet}catch{}
+ try{$null=Import-BowerbirdLazaretteSession -Quiet}catch{}
  Write-Host '';Write-Host '=== Bowerbird MVP ===' -ForegroundColor Cyan
  Write-Host 'Intelligent screenshot & image renamer (PowerShell + Lazarette + vision)' -ForegroundColor DarkGray
  if($Undo){
