@@ -2,7 +2,7 @@
 
 Index a folder, find duplicates, and rename and organize files from reviewed proposals that change nothing until you type APPLY.
 
-> **Status: skeleton.** The screenshots below are placeholders. Zombie Admin captures them with demo data, and the Chief of Staff scans them for sensitive content before they are added (team directive 10). Until then the image links do not resolve.
+> **Screenshots:** captured with demo data and scanned by the Chief of Staff (team directive 10).
 
 ## Before you start
 
@@ -15,45 +15,47 @@ Index a folder, find duplicates, and rename and organize files from reviewed pro
 
 ### 1. First launch
 
-Bowerbird Studio opens on **File Explorer** with the folder to scan.
+Bowerbird Studio opens on **File Explorer**. Enter the folder to scan and select **Use This Folder**. The files and folders appear, not yet indexed.
 
-![Bowerbird Studio File Explorer on first launch, with the demo folder in Folder to scan.](../assets/walkthrough/01-first-launch.png)
+![Bowerbird Studio File Explorer with the demo folder in Folder to scan, 5 visible items and the workspace not indexed yet.](../assets/walkthrough/01-first-launch.png)
 
 ### 2. Build the index
 
 Select **Build Index**. Files and folders appear with a preview of the selected file.
 
-![Bowerbird File Explorer after Build Index, showing the demo files and folders with a file preview.](../assets/walkthrough/02-build-index.png)
+![Bowerbird File Explorer after Build Index, with 5 files indexed and the demo watch-turnover-sample.txt open in File Preview.](../assets/walkthrough/02-build-index.png)
 
 ### 3. Search
 
 **Search** finds indexed files by name, and by content if you turned content indexing on.
 
-![Bowerbird Search page with results for the demo search term turnover.](../assets/walkthrough/03-search.png)
+![Bowerbird Intelligent Search with results for turnover: the demo file watch-turnover-sample.txt and its relevance score.](../assets/walkthrough/03-search.png)
 
 ### 4. Find duplicates
 
 **Duplicates** groups identical files.
 
-![Bowerbird Duplicate Detection page with one pair of identical demo screenshots.](../assets/walkthrough/04-duplicates.png)
+![Bowerbird Duplicate Detection page with one exact group of two identical demo screenshots and their shared hash.](../assets/walkthrough/04-duplicates.png)
 
 ### 5. Rename screenshots
 
-**Smart Rename** proposes new names with a confidence and destination. Nothing changes until you type `APPLY`.
+**Smart Rename** proposes new names with a confidence for each. Files it cannot rename are listed as skipped. Nothing changes until you select **Apply Approved Renames** and type `APPLY`.
 
-![Bowerbird Smart Rename page with rename proposals for the demo screenshots, showing confidence and destination before APPLY.](../assets/walkthrough/05-smart-rename.png)
+![Bowerbird Smart Rename page with 2 rename proposals for the demo screenshots at 55% confidence and 1 skipped because its target name is taken.](../assets/walkthrough/05-smart-rename.png)
 
 ### 6. Organize by rules
 
 **Organize** turns JSON rules into a move plan you inspect before applying. **Undo Last Apply** reverses it.
 
-![Bowerbird Rule-Based Organization page with the example rules and a proposed move plan, not yet applied.](../assets/walkthrough/06-organize-plan.png)
+![Bowerbird Organize page with the example JSON rules and 4 proposed moves into the Organized folder, not yet applied.](../assets/walkthrough/06-organize-plan.png)
 
 ### 7. Check health
 
 **Diagnostics** runs backend health checks and builds a support package.
 
-![Bowerbird Diagnostics and Feedback page with the backend health checks passing.](../assets/walkthrough/07-diagnostics.png)
+*Times in the server log are in UTC.*
+
+![Bowerbird Diagnostics and Feedback page with the backend health checks passing, recent server log requests and the Support Package options.](../assets/walkthrough/07-diagnostics.png)
 
 ## About these images
 
