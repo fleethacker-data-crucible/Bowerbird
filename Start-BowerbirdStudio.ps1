@@ -420,6 +420,11 @@ $script:StaticFiles=@{
  '/style.css'=@{File='Web\style.css';Type='text/css; charset=utf-8'}
  '/vendor/fleet/fleet.css'=@{File='Web\vendor\fleet\fleet.css';Type='text/css; charset=utf-8'}
  '/mark.svg'=@{File='assets\brand\mark.svg';Type='image/svg+xml'}
+ # The emblem (backdrop made transparent, one per theme) and the favicon / icon cut from its circle.
+ '/brand/emblem-dark.png'=@{File='Web\brand\emblem-dark.png';Type='image/png'}
+ '/brand/emblem-light.png'=@{File='Web\brand\emblem-light.png';Type='image/png'}
+ '/brand/icon-256.png'=@{File='Web\brand\icon-256.png';Type='image/png'}
+ '/favicon.ico'=@{File='Web\brand\favicon.ico';Type='image/x-icon'}
 }
 $url="http://127.0.0.1:$Port/"
 Write-Host "Bowerbird Studio running at $url" -ForegroundColor Cyan

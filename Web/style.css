@@ -20,8 +20,25 @@ svg.icon{flex:none}
 .shell{height:100vh;display:grid;grid-template-columns:var(--fl-sidebar-width) minmax(0,1fr);grid-template-rows:minmax(0,1fr) var(--fl-statusbar-height)}
 .sidebar-collapsed .shell{grid-template-columns:var(--fl-sidebar-collapsed) minmax(0,1fr)}
 .sidebar{display:flex;flex-direction:column;gap:8px;min-height:0;overflow-y:auto;overflow-x:hidden;background:var(--fl-sidebar);border-right:1px solid var(--fl-border);padding:0 0 8px}
-.brand{display:flex;align-items:center;gap:12px;min-height:var(--fl-header-height);padding:8px 16px;border-bottom:1px solid var(--fl-border)}
-.brand-mark{flex:none;width:40px;height:40px}
+/* Brand: the full emblem with its wordmark when expanded, the emblem's circle when collapsed. */
+.brand{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:var(--fl-header-height);padding:4px 12px 8px;border-bottom:1px solid var(--fl-border)}
+/* Nine views plus the footer: the emblem scales with the window height so the nav still fits. */
+.brand .brand-emblem{width:clamp(112px,16vh,184px);height:auto}
+.brand .brand-icon{display:none;flex:none;width:40px;height:40px}
+:root.sidebar-collapsed .brand .brand-emblem{display:none}
+.sidebar-collapsed .brand .brand-icon{display:block}
+/* Theme-specific artwork: the Night watch or Chart room version of the emblem. */
+.only-light{display:none}
+:root[data-theme='light'] .only-dark{display:none}
+:root[data-theme='light'] .only-light{display:block}
+@media (prefers-color-scheme:light){:root:not([data-theme='dark']) .only-dark{display:none}:root:not([data-theme='dark']) .only-light{display:block}}
+/* Welcome: until the folder is indexed, Explorer opens on the emblem and the two first steps. */
+.welcome{padding:32px 24px;margin-bottom:16px}
+.welcome[hidden]{display:none}
+.welcome .welcome-emblem{width:clamp(200px,32vh,300px);height:auto}
+.welcome p{max-width:58ch;margin:0}
+.welcome-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
+.ended-emblem{width:240px;height:240px}
 .wordmark{display:grid;gap:4px;line-height:1}
 .wordmark-name{font:var(--fl-text-page) var(--fl-font-display);letter-spacing:.14em;color:var(--fl-foreground);font-weight:400}
 .wordmark-rule{display:flex;align-items:center;gap:4px;color:var(--fl-brass)}
