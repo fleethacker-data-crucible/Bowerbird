@@ -11,7 +11,7 @@ $ok=$true
 try{
  Add-Check 'Windows PowerShell 5.1' ($PSVersionTable.PSVersion.Major -eq 5) ("Version "+$PSVersionTable.PSVersion)
  Add-Check 'Apartment state' ($host.Runspace.ApartmentState -eq 'STA') ([string]$host.Runspace.ApartmentState)
- $required=@('Start-BowerbirdStudio.ps1','Stop-Bowerbird.ps1','Private\BowerbirdLoopback.ps1','Private\BowerbirdLifecycle.ps1','Web\index.html','Web\app.js','Web\lifecycle.js','Web\style.css')
+ $required=@('Start-BowerbirdStudio.ps1','Stop-Bowerbird.ps1','Private\BowerbirdLoopback.ps1','Private\BowerbirdLifecycle.ps1','Web\index.html','Web\app.js','Web\lifecycle.js','Web\style.css','Web\shell.js','Web\icons.js','Web\vendor\fleet\fleet.css','assets\brand\mark.svg','Web\brand\emblem-dark.png','Web\brand\emblem-light.png','Web\brand\icon-256.png','Web\brand\favicon.ico')
  foreach($file in $required){
   $exists=Test-Path -LiteralPath (Join-Path $repo $file) -PathType Leaf
   Add-Check ('Required file: '+$file) $exists $(if($exists){'Present'}else{'Missing'})

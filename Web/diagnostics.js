@@ -108,7 +108,7 @@
   $('diag-stat-errors').textContent=recorder.countErrors;
   $('diag-stat-issues').textContent=recorder.issues.length;
   $('diag-stat-recording').textContent=recorder.active?'On':'Off';
-  $('diag-record-state').textContent=recorder.active?'● Recording':'Not recording';
+  $('diag-record-state').textContent=recorder.active?'Recording':'Not recording';
   $('diag-record-state').classList.toggle('active',recorder.active);
   $('diag-record-start').disabled=recorder.active;
   $('diag-record-stop').disabled=!recorder.active;
@@ -160,7 +160,7 @@
   const target=$('diag-health');target.replaceChildren();
   for(const check of result.checks||[]){
    const row=document.createElement('div');row.className='diag-check';
-   const icon=document.createElement('span');icon.className='diag-check-icon';icon.textContent=check.ok?'✓':'—';
+   const icon=document.createElement('span');icon.className='diag-check-icon'+(check.ok?' ok':'');const glyph=window.BowerbirdIcons&&window.BowerbirdIcons.icon(check.ok?'check':'minus',16);if(glyph)icon.append(glyph);else icon.textContent=check.ok?'OK':'—';icon.title=check.ok?'Passed':'Not ready';
    const label=document.createElement('div');const title=document.createElement('strong');title.textContent=check.name;
    const detail=document.createElement('small');detail.textContent=check.detail||'';
    label.append(title,detail);row.append(icon,label);target.append(row);
