@@ -94,7 +94,8 @@ try{
 }finally{
  if($edge -and -not $edge.HasExited){try{Stop-Process -Id $edge.Id -Force}catch{}}
  if($child -and -not $child.HasExited){
-  & taskkill.exe /PID $child.Id /T /F 2>$null|Out-Null
+  # The child can exit between the HasExited check and taskkill; under Stop, taskkill's 'not found' on stderr would fail the run.
+  try{& taskkill.exe /PID $child.Id /T /F 2>$null|Out-Null}catch{}
  }
  Start-Sleep -Milliseconds 200
  Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue
