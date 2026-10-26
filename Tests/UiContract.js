@@ -21,6 +21,18 @@ assert(/\/api\/stream/.test(js),'Streaming chat route expected');
 assert(html.includes('<script src="/diagnostics.js" defer></script>'),'Diagnostics script must be loaded');
 for(const id of ['view-diagnostics','diag-record-start','diag-record-stop','diag-issue-save','diag-support-export','diag-server-events','diag-issues'])assert(known.has(id),'Required diagnostics UI missing: '+id);
 assert(/feedback\/create/.test(diagnosticsJs),'Issue reporting endpoint missing');
+// Fleet Unified UI (docs/UNIFIED-UI.md): vendored fleet.css first, accent, theme before first paint, no raw colours.
+assert(/<html[^>]*data-app="bowerbird"/.test(html),'data-app="bowerbird" on <html> picks the satin blue accent');
+assert(html.indexOf('/vendor/fleet/fleet.css')!==-1&&html.indexOf('/vendor/fleet/fleet.css')<html.indexOf('/style.css'),'fleet.css must load before style.css');
+assert(html.indexOf('<script src="/shell.js"></script>')!==-1&&html.indexOf('/shell.js')<html.indexOf('</head>'),'shell.js applies the theme in <head>, before first paint');
+assert(html.indexOf('/icons.js')<html.indexOf('/diagnostics.js'),'icons.js must load before the scripts that draw icons');
+// Ignore a CRLF checkout (core.autocrlf): the git blob is stored with LF endings.
+const fleetCss=Buffer.from(fs.readFileSync(path.join(__dirname,'..','Web','vendor','fleet','fleet.css'),'utf8').split(String.fromCharCode(13)).join(''),'utf8');
+const blob=require('crypto').createHash('sha1').update('blob '+fleetCss.length+'\0').update(fleetCss).digest('hex');
+assert.equal(blob,'3b0d6abe8b026a3df180b741d98f8c841debc9f4','Web/vendor/fleet/fleet.css must be the unchanged Fleet UI v0.1 file');
+assert(!/#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/.test(css),'style.css uses --fl-* tokens only, no raw colours');
+assert(!/\bInter\b/.test(css),'No Inter font');
+for(const id of ['theme-toggle','sidebar-toggle','shortcuts-open','shortcuts-dialog','engine','connection','bound-address','app-version'])assert(known.has(id),'Fleet shell control missing: '+id);
 console.log('PASS: Bowerbird browser UI contract ('+known.size+' ids, '+required.length+' bound selectors)');
 // Lifecycle: the tab owns the server. Exercise Web/lifecycle.js against a fake browser.
 const lifecycleJs=fs.readFileSync(path.join(__dirname,'..','Web','lifecycle.js'),'utf8');

@@ -50,7 +50,7 @@ try{
    if(-not $edge.HasExited){try{Stop-Process -Id $edge.Id -Force}catch{};throw 'Edge headless DOM rendering timed out'}
    $html=if(Test-Path -LiteralPath $dump){[string](Get-Content -LiteralPath $dump -Raw)}else{''}
    if([string]::IsNullOrWhiteSpace($html)){throw 'Edge produced an empty DOM; nothing to check'}
-   if($html -notmatch 'Local server connected' -or $html -notmatch 'BowerbirdGuiProbe\.txt'){
+   if($html -notmatch 'id="connection">Running<' -or $html -notmatch 'BowerbirdGuiProbe\.txt'){
     foreach($name in @('notice','file-table','connection')){
      $at=$html.IndexOf('id="'+$name+'"')
      if($at -ge 0){Write-Host ("DOM "+$name+": "+$html.Substring([Math]::Max(0,$at-110),[Math]::Min(550,$html.Length-[Math]::Max(0,$at-110))))}
@@ -60,7 +60,7 @@ try{
     if($latest){Write-Host 'Recent local request events:';Get-Content -LiteralPath $latest.FullName -Tail 14|ForEach-Object {Write-Host $_}}
     if(Test-Path $edgeErr){Write-Host ((Get-Content $edgeErr -Tail 8) -join [Environment]::NewLine)}
    }
-   Assert ([bool]($html -match 'Local server connected')) 'Browser JavaScript never populated connection status'
+   Assert ([bool]($html -match 'id="connection">Running<')) 'Browser JavaScript never set the status bar engine state to Running'
    Assert ([bool]($html -match 'BowerbirdGuiProbe\.txt')) 'Browser JavaScript never populated the file explorer'
    Write-Host 'PASS: Edge executed GUI JavaScript and rendered file explorer' -ForegroundColor Green
    if(Get-Command node -ErrorAction SilentlyContinue){
