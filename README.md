@@ -4,7 +4,7 @@
 
 **Local-first file intelligence and screenshot renaming for Windows PowerShell 5.1 and your existing web browser.**
 
-[Windows PowerShell CI](https://github.com/sun-of-anton/bowerbird/actions/workflows/windows-powershell.yml) · [Source](https://github.com/sun-of-anton/bowerbird/tree/main)
+[Windows PowerShell CI](https://github.com/fleethacker-data-crucible/Bowerbird/actions/workflows/windows-powershell.yml) · [Source](https://github.com/fleethacker-data-crucible/Bowerbird/tree/main)
 
 No Python, Node, npm, Git executable, or admin-installed package is required on the target workstation. The development pipeline uses Node only to check syntax on GitHub-hosted Windows runners.
 
@@ -122,7 +122,7 @@ If the GUI will not launch at all, run `Start-Bowerbird.bat diagnostics`. See [D
 | Journaling | Per-step durable journal, archive of previous runs, source hash preconditions and checked undo |
 | Insights | Category inventory, indexed bytes, duplicate groups, extraction failures |
 | Local Agents | Read-only organization, duplication, and index-quality analysis; usable without cloud AI |
-| AI Chat | Optional Lazarette/GenAI/Grok integration, streamed browser output when provider supports SSE; fallback JSON responses |
+| AI Chat | Optional Lazarette/AI endpoint/Grok integration, streamed browser output when provider supports SSE; fallback JSON responses |
 | Code Insights | Language and line statistics by extension |
 | Diagnostics & Feedback | Halyard-style session recorder, automatic browser/API errors, local issue reporting and resolution, request IDs, health checks, redacted support export |\n| Tests | Windows PowerShell parser check, JavaScript/DOM contract tests, smoke and real localhost HTTP API tests on both transports |
 
@@ -134,6 +134,18 @@ If the GUI will not launch at all, run `Start-Bowerbird.bat diagnostics`. See [D
 - **Streaming**: The SSE bridge supports compatible providers; endpoints which decline streaming may return a complete JSON response. Model authentication still needs working approved credentials / Lazarette integration.
 - **Agents**: The local agents are deterministic and read-only. They are not autonomous LLM tool-call agents.
 - **Search**: Related-file matching is lexical, not neural embeddings. There is no on-device LLM included.
+
+### AI endpoint configuration
+
+AI Chat and the second naming pass default to the local phoenix-lai server's OpenAI-compatible API on this PC, `http://127.0.0.1:1234/v1/chat/completions`, with model `phoenixlai` (whichever model phoenix-lai has loaded). Set these in `Config\bowerbird.env` to change it:
+
+| Variable | Profile | Default | Notes |
+| --- | --- | --- | --- |
+| `BOWERBIRD_AI_ENDPOINT_URL` | AiEndpoint | `http://127.0.0.1:1234/v1/chat/completions` (local phoenix-lai) | Full chat-completions URL. Overrides the default when set. |
+| `BOWERBIRD_GROK_URL` | Grok | none | Outside provider, so no URL is built in. Required for the Grok profile. |
+| `LLM_URL` | any | none | Shared override (legacy alias): wins over both variables above. |
+| `LLM_MODEL` | any | `phoenixlai` on the local default, otherwise the profile's model | Set it when an override URL needs a specific model name. |
+| `AI_ENDPOINT_TOKEN` / `LLM_TOKEN` | AiEndpoint / any | none | Optional for a local (loopback) endpoint: phoenix-lai's API key is off by default, and no `Authorization` header is sent without a token. Required for a remote endpoint, where Lazarette is also tried. |
 
 ## Recommended workflows
 

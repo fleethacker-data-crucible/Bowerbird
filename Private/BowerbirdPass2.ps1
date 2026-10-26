@@ -23,7 +23,7 @@ function Get-BowerbirdMimeType {
  }
 }
 function Invoke-BowerbirdPass2 {
- [CmdletBinding()]param([Parameter(Mandatory=$true)][System.IO.FileInfo]$File,[pscustomobject]$Pass1Result,[ValidateSet('Auto','Grok','GenAi')][string]$Profile='Auto')
+ [CmdletBinding()]param([Parameter(Mandatory=$true)][System.IO.FileInfo]$File,[pscustomobject]$Pass1Result,[string]$Profile='Auto')
  $meta=$Pass1Result.Metadata;$b64=Get-BowerbirdImageBase64 -File $File
  if(-not $b64){
   return [pscustomobject]@{Confidence=$Pass1Result.Confidence;SuggestedName=$Pass1Result.SuggestedName;Reasoning=$Pass1Result.Reasoning+'; vision skipped (size or read failure)';Source='pass1-only';VisionText=$null;NeedsVision=$false}

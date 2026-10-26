@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Bowerbird MVP - intelligent image / screenshot renamer (PowerShell + Lazarette + GenAi/Grok vision)
+  Bowerbird MVP - intelligent image / screenshot renamer (PowerShell + Lazarette + AI endpoint/Grok vision)
 .DESCRIPTION
   Two-pass organizer: filename and metadata first, optional vision LLM second.
   Default is dry-run. Use -Apply to rename.
@@ -9,7 +9,7 @@
 [CmdletBinding(SupportsShouldProcess=$true)]
 param(
  [Parameter(Position=0)][string]$Path,
- [ValidateSet('Auto','Grok','GenAi')][string]$Profile='Auto',
+ [string]$Profile='Auto',   # Auto | AiEndpoint | Grok
  [double]$Pass1Threshold=0.65,[int]$MaxVision=25,[switch]$AllowVision,[switch]$Apply,[switch]$Recurse,[switch]$Undo,[string]$AuditLogPath
 )
 $Root=$PSScriptRoot;if(-not $Root){$Root=Get-Location}
@@ -56,6 +56,7 @@ try{
   $fullPath=Join-Path $Root $script
   if(Test-Path $fullPath){. $fullPath}else{throw "Missing required script: $script"}
  }
+ $Profile=ConvertTo-BowerbirdLlmProfile -Profile $Profile   # maps the deprecated profile name
  try{$null=Import-BowerbirdLazaretteSession -Quiet}catch{}
  Write-Host '';Write-Host '=== Bowerbird MVP ===' -ForegroundColor Cyan
  Write-Host 'Intelligent screenshot & image renamer (PowerShell + Lazarette + vision)' -ForegroundColor DarkGray

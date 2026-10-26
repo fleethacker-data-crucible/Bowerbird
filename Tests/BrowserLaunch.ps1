@@ -29,7 +29,7 @@ try{
  $site=[uri]$session
  Assert ($site.Host -eq '127.0.0.1') 'GUI URL must be loopback-only'
  $landing=Invoke-WebRequest -Uri $session -UseBasicParsing -TimeoutSec 15
- Assert ($landing.StatusCode -eq 200 -and $landing.Content -match 'BOWERBIRD') 'GUI HTML is not served'
+ Assert ($landing.StatusCode -eq 200 -and [bool]($landing.Content -match 'BOWERBIRD')) 'GUI HTML is not served'
  $token=[uri]::UnescapeDataString(($site.Query.TrimStart('?') -split '=')[1])
  $health=Invoke-RestMethod -Uri ($site.GetLeftPart([UriPartial]::Authority)+'/api/status') -Method Post -ContentType 'application/json' -Headers @{'X-Bowerbird-Token'=$token} -Body '{}' -TimeoutSec 15
  Assert ($health.ok -and $health.port -eq $site.Port) 'GUI status is unreachable'
@@ -48,7 +48,8 @@ try{
    $edge=Start-Process -FilePath $edgeBinary[0] -ArgumentList $flags -RedirectStandardOutput $dump -RedirectStandardError $edgeErr -PassThru
    for($n=0;$n -lt 100 -and -not $edge.HasExited;$n++){Start-Sleep -Milliseconds 250}
    if(-not $edge.HasExited){try{Stop-Process -Id $edge.Id -Force}catch{};throw 'Edge headless DOM rendering timed out'}
-   $html=if(Test-Path -LiteralPath $dump){Get-Content -LiteralPath $dump -Raw}else{''}
+   $html=if(Test-Path -LiteralPath $dump){[string](Get-Content -LiteralPath $dump -Raw)}else{''}
+   if([string]::IsNullOrWhiteSpace($html)){throw 'Edge produced an empty DOM; nothing to check'}
    if($html -notmatch 'Local server connected' -or $html -notmatch 'BowerbirdGuiProbe\.txt'){
     foreach($name in @('notice','file-table','connection')){
      $at=$html.IndexOf('id="'+$name+'"')
@@ -59,8 +60,8 @@ try{
     if($latest){Write-Host 'Recent local request events:';Get-Content -LiteralPath $latest.FullName -Tail 14|ForEach-Object {Write-Host $_}}
     if(Test-Path $edgeErr){Write-Host ((Get-Content $edgeErr -Tail 8) -join [Environment]::NewLine)}
    }
-   Assert ($html -match 'Local server connected') 'Browser JavaScript never populated connection status'
-   Assert ($html -match 'BowerbirdGuiProbe\.txt') 'Browser JavaScript never populated the file explorer'
+   Assert ([bool]($html -match 'Local server connected')) 'Browser JavaScript never populated connection status'
+   Assert ([bool]($html -match 'BowerbirdGuiProbe\.txt')) 'Browser JavaScript never populated the file explorer'
    Write-Host 'PASS: Edge executed GUI JavaScript and rendered file explorer' -ForegroundColor Green
    if(Get-Command node -ErrorAction SilentlyContinue){
     $alternate=Join-Path $temp 'AlternateForGui'
@@ -81,7 +82,7 @@ try{
  Assert (-not $presence.autoStop) '--stay passed through the BAT launcher turns auto-stop off'
  $stopOutput=& powershell.exe -NoProfile -NonInteractive -File (Join-Path $repo 'Stop-Bowerbird.ps1') -Port $site.Port 2>&1|Out-String
  Write-Host $stopOutput.Trim()
- Assert ($stopOutput -match ('Stopped PID '+$mine[0].Pid)) 'Stop-Bowerbird.ps1 reports the PID it stopped'
+ Assert ([bool]($stopOutput -match ('Stopped PID '+$mine[0].Pid))) 'Stop-Bowerbird.ps1 reports the PID it stopped'
  Assert (-not (Get-Process -Id $mine[0].Pid -ErrorAction SilentlyContinue)) 'Stop-Bowerbird.ps1 stopped the server'
  Assert (-not (Test-Path -LiteralPath $mine[0].RuntimeFile)) 'Stop-Bowerbird.ps1 removed the runtime file'
  Write-Host 'PASS: --stay pass-through and Stop-Bowerbird.ps1 stopped the running server' -ForegroundColor Green

@@ -1,4 +1,4 @@
-# BOWERBIRD — local development (no CAC)
+# BOWERBIRD — local development (no smart card)
 
 Run `Launch-LocalDev.bat` from this repository on your **personal Windows PC** after checking out the feature branch. Do not use on a managed system to defeat organizational security policy.
 
@@ -14,10 +14,10 @@ Run `Launch-LocalDev.bat` from this repository on your **personal Windows PC** a
 
 ```powershell
 git fetch origin
-git switch feature/local-dev-no-cac-launcher
+git switch <feature-branch>
 .\Launch-LocalDev.bat
 ```
 
-The original production launcher and authentication checks remain unchanged. Mock, local, or offline sessions are **not** authenticated Navy sessions, and must not contain CUI, real credentials, classified material, or production personal data.
+The original production launcher and authentication checks remain unchanged. Mock, local, or offline sessions are **not** authenticated operational sessions, and must not contain sensitive or regulated data, real credentials, or production personal data.
 
-When stable, remove `Launch-LocalDev.bat` (and the Lazarette mock files where applicable) from the release branch. Do not deploy them as a means of avoiding CAC or authorization for live systems.
+When stable, remove `Launch-LocalDev.bat` (and the Lazarette mock files where applicable) from the release branch. Do not deploy them as a means of avoiding smart card sign-in or authorization for live systems.

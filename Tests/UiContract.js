@@ -1,4 +1,4 @@
-// Static browser contract tests; Node is CI-only, never required on Nautilus.
+// Static browser contract tests; Node is CI-only, never required on the managed workstation.
 'use strict';
 const fs=require('fs');
 const path=require('path');

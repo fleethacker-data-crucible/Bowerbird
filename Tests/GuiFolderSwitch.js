@@ -1,5 +1,5 @@
 // CI-only, dependency-free Chromium DevTools test of the actual GUI folder selector.
-// Does not run on or install anything on a Navy workstation.
+// Does not run on or install anything on an operational workstation.
 'use strict';
 const fs=require('node:fs');
 const os=require('node:os');

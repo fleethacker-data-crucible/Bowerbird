@@ -107,7 +107,7 @@ function Get-BowerbirdRecentDiagnostics([int]$Limit=200){
    $e=$line|ConvertFrom-Json
    $event=[string]$e.event
    $route=[string]$e.route
-   if($event -notmatch '^[a-zA-Z0-9_.:-]{1,60}$'){$event='UNCLASSIFIED'}
+   if($event -notmatch '^[a-zA-Z0-9_.:-]{1,60}$'){$event='UNCATEGORIZED'}
    if($route -notmatch '^/[a-zA-Z0-9_./:-]*$'){$route='[ROUTE REDACTED]'}
    $items.Add([pscustomobject]@{
     time=[string]$e.time;level=[string]$e.level
