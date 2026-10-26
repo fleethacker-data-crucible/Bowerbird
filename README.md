@@ -144,6 +144,8 @@ If the GUI will not launch at all, run `Start-Bowerbird.bat diagnostics`. See [D
 
 ### AI endpoint configuration
 
+> **Intelligence router:** these endpoints will move behind the Fleet intelligence router, [Fairlead](https://github.com/fleethacker-data-crucible/Fairlead), so Bowerbird defaults to the router (which picks local phoenix-lai or a remote provider) instead of a fixed endpoint. Until then the settings below stay as they are. See [TechStack](TechStack), "Intelligence router".
+
 AI Chat and the second naming pass default to the local phoenix-lai server's OpenAI-compatible API on this PC, `http://127.0.0.1:1234/v1/chat/completions`, with model `phoenixlai` (whichever model phoenix-lai has loaded). Set these in `Config\bowerbird.env` to change it:
 
 | Variable | Profile | Default | Notes |
