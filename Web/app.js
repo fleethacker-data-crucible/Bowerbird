@@ -32,12 +32,12 @@ async function run(action,done){try{notify('Working…');const result=await acti
 function size(bytes){if(bytes===null||bytes===undefined)return '—';if(bytes<1024)return bytes+' B';if(bytes<1048576)return (bytes/1024).toFixed(1)+' KB';return (bytes/1048576).toFixed(1)+' MB'}
 function show(view){document.querySelectorAll('.nav').forEach(b=>{const on=b.dataset.view===view;b.classList.toggle('active',on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.id==='view-'+view));$('page-title').textContent=({files:'File Explorer',search:'Intelligent Search',insights:'Insights & Agents',duplicates:'Duplicate Detection',organize:'File Organization',rename:'Smart Rename',code:'Code Insights',assistant:'AI Assistant',diagnostics:'Diagnostics & Feedback'})[view];if(window.BowerbirdDiagnostics)window.BowerbirdDiagnostics.page(view);if(view==='diagnostics')return window.BowerbirdDiagnostics?.activate();if(view==='files')return loadFiles();if(view==='insights')return loadInsights()}
 document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
-async function loadStatus(){const s=await run(()=>api('status'));if(!s)return;state.status=s;engine('running');if(s.version)$('app-version').textContent='Bowerbird Studio '+s.version;$('workspace').textContent=s.root;$('workspace-current').textContent=s.root;$('workspace-path').value=s.root;$('index-state').textContent=s.indexExists?'Index available':'Not indexed';$('ai-state').textContent=s.cloudAI?'Enabled':'Offline';$('ai-hint').textContent=s.cloudAI?'Streaming connection to configured provider':'Offline assistance · use -AllowCloudAI for approved provider';if(s.indexExists)loadInsights()}
+async function loadStatus(){const s=await run(()=>api('status'));if(!s)return;state.status=s;engine('running');if(s.version)$('app-version').textContent='Bowerbird Studio '+s.version;$('workspace').textContent=s.root;$('workspace-current').textContent=s.root;$('workspace-path').value=s.root;$('index-state').textContent=s.indexExists?'Index available':'Not indexed';$('welcome').hidden=!!s.indexExists;$('ai-state').textContent=s.cloudAI?'Enabled':'Offline';$('ai-hint').textContent=s.cloudAI?'Streaming connection to configured provider':'Offline assistance · use -AllowCloudAI for approved provider';if(s.indexExists)loadInsights()}
 function resetForWorkspaceSwitch(){
  state.path='.';
  state.plan=null;state.renamePlan=null;state.selectedFile=null;
  $('apply').disabled=true;$('rename-apply').disabled=true;$('related').disabled=true;
- $('cwd').textContent='.';$('file-count').textContent='—';$('index-state').textContent='Not indexed';$('size-state').textContent='—';
+ $('cwd').textContent='.';$('file-count').textContent='—';$('index-state').textContent='Not indexed';$('welcome').hidden=false;$('size-state').textContent='—';
  $('preview-name').textContent='Select a file';$('preview-text').textContent='No file selected';
  if(state.previewUrl){URL.revokeObjectURL(state.previewUrl);state.previewUrl=null}
  clear($('media-preview'));clear($('file-table'));
@@ -259,3 +259,5 @@ $('end-session').addEventListener('click',async()=>{
  }catch(err){notify(err.message,true);button.disabled=false}
 });
 loadStatus().then(()=>{record('READY','browser_ui');return loadFiles()}).catch(err=>notify('Initialization failed: '+err.message,true));
+// Welcome panel (shown until the folder is indexed): its buttons run the existing toolbar actions.
+$('welcome-index').addEventListener('click',()=>$('index').click());$('welcome-browse').addEventListener('click',()=>$('browse-folder').click());
