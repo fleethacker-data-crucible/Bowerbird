@@ -17,7 +17,7 @@ Use `Start-Bowerbird.bat` or `Start-Bowerbird-Console.bat` as launch alternative
 
 ## How it works
 
-Pass 1 analyzes filename patterns, timestamps, and image metadata without transmitting content. Pass 2 optionally submits an image to a configured GenAI or Grok multimodal endpoint if the local result needs improvement. The resulting name is sanitized and made collision-resistant.
+Pass 1 analyzes filename patterns, timestamps, and image metadata without transmitting content. Pass 2 optionally submits an image to a configured AI endpoint or Grok multimodal endpoint if the local result needs improvement. The resulting name is sanitized and made collision-resistant.
 
 Renaming defaults to preview / WhatIf. The tool writes JSON audit entries and supports reversing applied renames through the audit log.
 
@@ -27,4 +27,4 @@ See `README_INTELLIGENCE.md` for separate indexing, duplicate detection, OpenXML
 
 ## Security and limitations
 
-Only send data to endpoints authorized for the file's information classification. Approval to use PowerShell is not approval to bypass workstation security. This project is an early proof of concept; transaction recovery, model endpoint compatibility, performance, and Nautilus workstation behavior require testing.
+Only send data to endpoints authorized for the file's information classification. Approval to use PowerShell is not approval to bypass workstation security. This project is an early proof of concept; transaction recovery, model endpoint compatibility, performance, and managed-workstation behavior require testing.

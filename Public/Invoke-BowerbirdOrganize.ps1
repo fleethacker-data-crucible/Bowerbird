@@ -3,7 +3,7 @@
 function Invoke-BowerbirdOrganize {
  [CmdletBinding(SupportsShouldProcess=$true)]param(
   [Parameter(Mandatory)][string]$Path,
-  [ValidateSet('Auto','Grok','GenAi')][string]$Profile='Auto',
+  [string]$Profile='Auto',   # Auto | AiEndpoint | Grok
   [double]$Pass1Threshold=0.65,[int]$MaxVision=25,[switch]$AllowVision,[switch]$Apply,[switch]$Recurse,[string]$Root
  )
  if(-not $Root){$Root=$PSScriptRoot;if(-not $Root){$Root=Get-Location}}
