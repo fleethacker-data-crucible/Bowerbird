@@ -17,6 +17,12 @@ No Python, Node, npm, Git executable, or admin-installed package is required on 
 
 A *bower* is a ship's main anchor, the one carried at the bow (sailors call it the best bower). The bowerbird is the bird that collects small treasures and arranges them with care. Bowerbird does the same for your files: it gathers screenshots and documents, works out what they are, and puts them in order.
 
+| Night watch (dark) | Chart room (light) |
+| --- | --- |
+| ![Bowerbird Explorer in the Night watch theme](docs/screenshots/explorer-night-watch.png) | ![Bowerbird Explorer in the Chart room theme](docs/screenshots/explorer-chart-room.png) |
+
+Studio follows the Windows light/dark setting; the theme button in the sidebar switches between Follow Windows, Night watch and Chart room. The screenshots show a throwaway folder of invented sample files.
+
 ## Start: the GUI, not the legacy CLI
 
 **Double-click Start-Bowerbird.bat**. This is the supported GUI launcher, modeled on Lazarette/Halyard's PowerShell 5.1 -STA, -NoProfile, process-scoped execution settings and browser-native architecture. It opens **Bowerbird Studio**, not the old renamer.
