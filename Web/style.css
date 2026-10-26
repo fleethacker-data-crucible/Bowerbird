@@ -14,7 +14,7 @@ svg.icon{flex:none}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 .muted,.panel-heading span{color:var(--fl-muted-foreground)}
 .eyebrow,.nav-label{font-size:var(--fl-text-caption);letter-spacing:.12em;color:var(--fl-brass);font-weight:600}
-/* Chart room: the brass token is 4.28:1 on the light sidebar; brass mixed 8% toward the foreground token (same hue, about #806544) is 4.73:1 there and 5.19:1 on the page. */
+/* Chart room: the brass token is 4.28:1 on the light sidebar; brass mixed 8% toward the foreground token (same hue) is 4.73:1 there and 5.19:1 on the page. */
 :root[data-theme='light'] .eyebrow,:root[data-theme='light'] .nav-label{color:color-mix(in srgb,var(--fl-brass) 92%,var(--fl-foreground))}
 @media (prefers-color-scheme:light){:root:not([data-theme='dark']) .eyebrow,:root:not([data-theme='dark']) .nav-label{color:color-mix(in srgb,var(--fl-brass) 92%,var(--fl-foreground))}}
 .noscript{margin:12px}
