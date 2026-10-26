@@ -1,12 +1,15 @@
 # Bowerbird AI endpoint / Grok multimodal client
 #requires -Version 5.1
-# Endpoint URLs are configuration, not code: set BOWERBIRD_AI_ENDPOINT_URL / BOWERBIRD_GROK_URL
-# (or LLM_URL for any profile) in Config\bowerbird.env.
+# AiEndpoint defaults to the local phoenix-lai server's OpenAI-compatible API on this PC (loopback only).
+# BOWERBIRD_AI_ENDPOINT_URL overrides it, and LLM_URL overrides every profile. Grok is an outside provider
+# with no built-in URL: set BOWERBIRD_GROK_URL (or LLM_URL) in Config\bowerbird.env. No other host is built in.
 $script:BowerbirdLlmDefaults=@{
  GrokUrlEnv='BOWERBIRD_GROK_URL'
  GrokModel='system.ai.grok-4-6'
  AiEndpointUrlEnv='BOWERBIRD_AI_ENDPOINT_URL'
+ AiEndpointUrl='http://127.0.0.1:1234/v1/chat/completions'   # local phoenix-lai
  AiEndpointModel='gemini-3.8-flash'
+ LocalDefaultModel='phoenixlai'   # phoenix-lai's name for "the model it has loaded"
 }
 # Profiles are Auto | AiEndpoint | Grok. The former AI-endpoint profile name is a legacy alias (deprecated).
 $script:BowerbirdLlmProfileAliases=@{'GenAi'='AiEndpoint'}   # legacy alias
@@ -46,9 +49,20 @@ function Get-BowerbirdLlmConfig {
   else{$resolved='AiEndpoint'}
  }
  if([string]::IsNullOrWhiteSpace($url)){$url=[Environment]::GetEnvironmentVariable($script:BowerbirdLlmDefaults[$resolved+'UrlEnv'])}
- if([string]::IsNullOrWhiteSpace($model)){$model=$script:BowerbirdLlmDefaults[$resolved+'Model']}
+ $isDefault=$false
+ if([string]::IsNullOrWhiteSpace($url) -and $resolved -eq 'AiEndpoint'){$url=$script:BowerbirdLlmDefaults.AiEndpointUrl;$isDefault=$true}
+ if([string]::IsNullOrWhiteSpace($model)){
+  if($isDefault){$model=$script:BowerbirdLlmDefaults.LocalDefaultModel}else{$model=$script:BowerbirdLlmDefaults[$resolved+'Model']}
+ }
  if($null -eq $url){$url=''}
- return [pscustomobject]@{Profile=$resolved;Url=$url.Trim().TrimEnd('/');Model=$model}
+ return [pscustomobject]@{Profile=$resolved;Url=$url.Trim().TrimEnd('/');Model=$model;DefaultUrl=$isDefault}
+}
+function Test-BowerbirdLoopbackUrl {
+ # True when the URL points at this PC (127.0.0.0/8, ::1 or localhost).
+ param([AllowEmptyString()][string]$Url)
+ $u=$null
+ if([string]::IsNullOrWhiteSpace($Url) -or -not [Uri]::TryCreate($Url.Trim(),[UriKind]::Absolute,[ref]$u)){return $false}
+ return [bool]$u.IsLoopback
 }
 function Assert-BowerbirdLlmUrl {
  param($Config)
@@ -83,16 +97,31 @@ function Get-BowerbirdLlmToken {
  }
  throw "No LLM token for profile $ForProfile. Configure Lazarette or $envTarget."
 }
+function Get-BowerbirdLlmAuthToken {
+ # The sanitized token for a resolved configuration, or $null when none is needed. Remote endpoints need one
+ # (Get-BowerbirdLlmToken). A loopback endpoint such as the local phoenix-lai server has its API key off by
+ # default: a profile or LLM_TOKEN value is used when set, the vault is not opened, and no header is sent without one.
+ param([Parameter(Mandatory)]$Config)
+ if(Test-BowerbirdLoopbackUrl -Url ([string]$Config.Url)){
+  $token=Get-BowerbirdLlmEnvToken -ForProfile $Config.Profile
+  if(-not $token -and -not [string]::IsNullOrWhiteSpace($env:LLM_TOKEN)){$token=$env:LLM_TOKEN}
+  if(-not $token){return $null}
+ }else{$token=Get-BowerbirdLlmToken -ForProfile $Config.Profile}
+ $token=([string]$token).Trim().Trim("'").Trim('"')
+ if($token -match '^(?i)Bearer\s+(.+)$'){$token=$Matches[1].Trim()}
+ $token=($token -replace '[\r\n]','').Trim()
+ if(-not $token){
+  if(Test-BowerbirdLoopbackUrl -Url ([string]$Config.Url)){return $null}
+  throw 'LLM token empty after sanitization'
+ }
+ return $token
+}
 function Invoke-BowerbirdChat {
  [CmdletBinding()]param([Parameter(Mandatory)][object[]]$Messages,[string]$Profile='Auto',[string]$Model,[int]$MaxTokens=1024,[double]$Temperature=0.15,[int]$TimeoutSec=180)
  $cfg=Get-BowerbirdLlmConfig -Profile $Profile
  Assert-BowerbirdLlmUrl -Config $cfg
  if($Model){$cfg.Model=$Model}
- $token=Get-BowerbirdLlmToken -ForProfile $cfg.Profile
- $token=$token.Trim().Trim("'").Trim('"')
- if($token -match '^(?i)Bearer\s+(.+)$'){$token=$Matches[1].Trim()}
- $token=($token -replace '[\r\n]','').Trim()
- if(-not $token){throw 'LLM token empty after sanitization'}
+ $token=Get-BowerbirdLlmAuthToken -Config $cfg
  $msgList=@()
  foreach($m in $Messages){
   $role=if($m -is [hashtable]){[string]$m['role']}else{[string]$m.role}
@@ -103,7 +132,9 @@ function Invoke-BowerbirdChat {
  if($cfg.Profile -ne 'Grok' -and $cfg.Url -notmatch 'serving-endpoints'){$payload.stream=$false}
  $bytes=[Text.Encoding]::UTF8.GetBytes(($payload|ConvertTo-Json -Depth 12))
  try{[Net.ServicePointManager]::SecurityProtocol=[Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12}catch{}
- $resp=Invoke-RestMethod -Uri $cfg.Url -Method Post -Headers @{Authorization=('Bearer '+$token);Accept='application/json'} -Body $bytes -ContentType 'application/json; charset=utf-8' -TimeoutSec $TimeoutSec
+ # No Authorization header at all when a local endpoint has no token (never an empty "Bearer ").
+ $headers=@{Accept='application/json'};if($token){$headers['Authorization']='Bearer '+$token}
+ $resp=Invoke-RestMethod -Uri $cfg.Url -Method Post -Headers $headers -Body $bytes -ContentType 'application/json; charset=utf-8' -TimeoutSec $TimeoutSec
  $text=$null
  if($resp.choices -and $resp.choices[0].message.content){$text=[string]$resp.choices[0].message.content}
  elseif($resp.choices -and $resp.choices[0].text){$text=[string]$resp.choices[0].text}

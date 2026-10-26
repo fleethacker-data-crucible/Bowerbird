@@ -18,16 +18,14 @@ function Invoke-BowerbirdStreamingChat {
  )
  $cfg=Get-BowerbirdLlmConfig -Profile $Profile
  Assert-BowerbirdLlmUrl -Config $cfg
- $token=Get-BowerbirdLlmToken -ForProfile $cfg.Profile
- $token=$token.Trim().Trim("'").Trim('"') -replace '[\r\n]',''
- if($token -match '^(?i)Bearer\s+(.+)$'){$token=$Matches[1]}
+ $token=Get-BowerbirdLlmAuthToken -Config $cfg
  $payload=[ordered]@{model=$cfg.Model;messages=$Messages;max_tokens=$MaxTokens;temperature=0.2;stream=$true}
  $bytes=[Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject $payload -Depth 12))
  $request=[Net.HttpWebRequest][Net.WebRequest]::Create($cfg.Url)
  $request.Method='POST';$request.ContentType='application/json; charset=utf-8'
  $request.Accept='text/event-stream,application/json'
  $request.Timeout=$TimeoutSeconds*1000;$request.ReadWriteTimeout=$TimeoutSeconds*1000
- $request.Headers['Authorization']='Bearer '+$token
+ if($token){$request.Headers['Authorization']='Bearer '+$token}   # none for a local endpoint without a token
  $request.ContentLength=$bytes.Length
  $remote=$null;$responseReader=$null
  try{

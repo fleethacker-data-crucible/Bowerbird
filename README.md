@@ -131,6 +131,18 @@ If the GUI will not launch at all, run `Start-Bowerbird.bat diagnostics`. See [D
 - **Agents**: The local agents are deterministic and read-only. They are not autonomous LLM tool-call agents.
 - **Search**: Related-file matching is lexical, not neural embeddings. There is no on-device LLM included.
 
+### AI endpoint configuration
+
+AI Chat and the second naming pass default to the local phoenix-lai server's OpenAI-compatible API on this PC, `http://127.0.0.1:1234/v1/chat/completions`, with model `phoenixlai` (whichever model phoenix-lai has loaded). Set these in `Config\bowerbird.env` to change it:
+
+| Variable | Profile | Default | Notes |
+| --- | --- | --- | --- |
+| `BOWERBIRD_AI_ENDPOINT_URL` | AiEndpoint | `http://127.0.0.1:1234/v1/chat/completions` (local phoenix-lai) | Full chat-completions URL. Overrides the default when set. |
+| `BOWERBIRD_GROK_URL` | Grok | none | Outside provider, so no URL is built in. Required for the Grok profile. |
+| `LLM_URL` | any | none | Shared override (legacy alias): wins over both variables above. |
+| `LLM_MODEL` | any | `phoenixlai` on the local default, otherwise the profile's model | Set it when an override URL needs a specific model name. |
+| `AI_ENDPOINT_TOKEN` / `LLM_TOKEN` | AiEndpoint / any | none | Optional for a local (loopback) endpoint: phoenix-lai's API key is off by default, and no `Authorization` header is sent without a token. Required for a remote endpoint, where Lazarette is also tried. |
+
 ## Recommended workflows
 
 **Explore and search**: Launch with a disposable or approved workspace, click *Build Index*, optionally enable content indexing, then use Search, Duplicates, or Insights & Agents.
