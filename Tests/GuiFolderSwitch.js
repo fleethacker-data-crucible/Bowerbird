@@ -69,7 +69,7 @@ async function main(){
   }catch(err){console.error('CDP message failed:',err.message)}
  });
  const initial=await until(()=>evaluate(
-  "!!document.getElementById('workspace-path') && document.getElementById('connection').textContent.includes('connected') && document.getElementById('file-table').textContent.includes('BowerbirdGuiProbe.txt')"
+  "!!document.getElementById('workspace-path') && document.getElementById('connection').textContent==='Running' && document.getElementById('file-table').textContent.includes('BowerbirdGuiProbe.txt')"
  ),'Initial GUI explorer populated');
  assert.equal(initial,true);
  const value=JSON.stringify(selectedFolder);
