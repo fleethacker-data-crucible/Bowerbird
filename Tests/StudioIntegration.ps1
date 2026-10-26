@@ -46,7 +46,7 @@ try{
  $site="http://127.0.0.1:$port/"
  $base=$site+'api/'
  # Unlike prior versions, validate the browser page and assets, not API only.
- foreach($asset in @(@{path='';type='text/html';needle='BOWERBIRD'},@{path='app.js';type='javascript';needle='async function api'},@{path='style.css';type='text/css';needle='.shell'})){
+ foreach($asset in @(@{path='';type='text/html';needle='BOWERBIRD'},@{path='app.js';type='javascript';needle='async function api'},@{path='style.css';type='text/css';needle='.shell'},@{path='shell.js';type='javascript';needle='bowerbird-theme'},@{path='icons.js';type='javascript';needle='BowerbirdIcons'},@{path='vendor/fleet/fleet.css';type='text/css';needle="[data-app='bowerbird']"},@{path='mark.svg';type='image/svg\+xml';needle='<svg'})){
   $response=Invoke-WebRequest -Uri ($site+$asset.path) -UseBasicParsing -TimeoutSec 20
   Assert ($response.StatusCode -eq 200) ('Browser asset HTTP 200: '+$asset.path)
   Assert ($response.Headers['Content-Type'] -match $asset.type) ('Browser asset Content-Type: '+$asset.path)
