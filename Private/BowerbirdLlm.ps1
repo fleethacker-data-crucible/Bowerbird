@@ -1,39 +1,78 @@
-# Bowerbird GenAI / Grok multimodal client
+# Bowerbird AI endpoint / Grok multimodal client
 #requires -Version 5.1
+# Endpoint URLs are configuration, not code: set BOWERBIRD_AI_ENDPOINT_URL / BOWERBIRD_GROK_URL
+# (or LLM_URL for any profile) in Config\bowerbird.env.
 $script:BowerbirdLlmDefaults=@{
- GrokUrl='https://advana-jupiter.cloud.databricks.mil/serving-endpoints/databricks-grok-4-6/invocations'
+ GrokUrlEnv='BOWERBIRD_GROK_URL'
  GrokModel='system.ai.grok-4-6'
- GenAiUrl='https://api.genai.mil/v1/chat/completions'
- GenAiModel='gemini-3.8-flash'
+ AiEndpointUrlEnv='BOWERBIRD_AI_ENDPOINT_URL'
+ AiEndpointModel='gemini-3.8-flash'
+}
+# Profiles are Auto | AiEndpoint | Grok. The former AI-endpoint profile name is a legacy alias (deprecated).
+$script:BowerbirdLlmProfileAliases=@{'GenAi'='AiEndpoint'}   # legacy alias
+# Token variables per profile, current name first; the second AiEndpoint entry is a legacy alias (deprecated).
+$script:BowerbirdLlmTokenEnv=@{AiEndpoint=@('AI_ENDPOINT_TOKEN','GENAI_TOKEN');Grok=@('DATABRICKS_TOKEN')}   # legacy alias
+# Lazarette vault items. Name is canonical; Legacy names (deprecated) are tried when the canonical item is missing.
+# EnvKeys override the item name: Bowerbird's current name, then its former names (legacy alias), then Halyard's
+# shared HALYARD_LAZARETTE_ITEM_* and the names Halyard used under its previous name (legacy alias).
+$script:BowerbirdLlmVaultItems=@{
+ AiEndpoint=@{Name='ai-endpoint-api';Legacy=@('genapi')   # legacy alias
+  EnvKeys=@('BOWERBIRD_LAZARETTE_ITEM_AiEndpoint','BOWERBIRD_LAZARETTE_ITEM_GenAi','BOWERBIRD_ARC_ITEM_GenAi','HALYARD_LAZARETTE_ITEM_GenAi','HALYARD_LAZARETTE_ITEM_Llm','CASCADE_ARC_ITEM_GenAi','CASCADE_ARC_ITEM_Llm')}   # legacy alias
+ Grok=@{Name='grok-api';Legacy=@('advana-api')   # legacy alias
+  EnvKeys=@('BOWERBIRD_LAZARETTE_ITEM_Grok','BOWERBIRD_ARC_ITEM_Grok','HALYARD_LAZARETTE_ITEM_Grok','CASCADE_ARC_ITEM_Grok')}   # legacy alias
+}
+function ConvertTo-BowerbirdLlmProfile {
+ [CmdletBinding()]param([string]$Profile='Auto')
+ if([string]::IsNullOrWhiteSpace($Profile)){return 'Auto'}
+ $p=$Profile.Trim()
+ foreach($k in $script:BowerbirdLlmProfileAliases.Keys){if($p -eq $k){return $script:BowerbirdLlmProfileAliases[$k]}}
+ foreach($known in @('Auto','AiEndpoint','Grok')){if($p -eq $known){return $known}}
+ throw "Unknown LLM profile '$Profile'. Use Auto, AiEndpoint or Grok."
+}
+function Get-BowerbirdLlmEnvToken {
+ param([string]$ForProfile)
+ foreach($n in @($script:BowerbirdLlmTokenEnv[$ForProfile])){
+  $v=[Environment]::GetEnvironmentVariable($n);if(-not [string]::IsNullOrWhiteSpace($v)){return $v.Trim()}
+ }
+ return $null
 }
 function Get-BowerbirdLlmConfig {
- [CmdletBinding()]param([ValidateSet('Auto','Grok','GenAi')][string]$Profile='Auto')
+ [CmdletBinding()]param([string]$Profile='Auto')
+ $Profile=ConvertTo-BowerbirdLlmProfile -Profile $Profile
  $url=$env:LLM_URL;$model=$env:LLM_MODEL;$resolved=$Profile
  if($Profile -eq 'Auto'){
-  if($url -match 'databricks\.mil|serving-endpoints'){$resolved='Grok'}
-  elseif($url -match 'genai\.mil'){$resolved='GenAi'}
-  elseif(-not [string]::IsNullOrWhiteSpace($env:DATABRICKS_TOKEN) -and [string]::IsNullOrWhiteSpace($env:GENAI_TOKEN)){$resolved='Grok'}
-  else{$resolved='GenAi'}
+  if($url -match 'serving-endpoints'){$resolved='Grok'}
+  elseif((Get-BowerbirdLlmEnvToken -ForProfile Grok) -and -not (Get-BowerbirdLlmEnvToken -ForProfile AiEndpoint)){$resolved='Grok'}
+  else{$resolved='AiEndpoint'}
  }
- if([string]::IsNullOrWhiteSpace($url)){$url=if($resolved -eq 'GenAi'){$script:BowerbirdLlmDefaults.GenAiUrl}else{$script:BowerbirdLlmDefaults.GrokUrl}}
- if([string]::IsNullOrWhiteSpace($model)){$model=if($resolved -eq 'GenAi'){$script:BowerbirdLlmDefaults.GenAiModel}else{$script:BowerbirdLlmDefaults.GrokModel}}
- return [pscustomobject]@{Profile=$resolved;Url=$url.TrimEnd('/');Model=$model}
+ if([string]::IsNullOrWhiteSpace($url)){$url=[Environment]::GetEnvironmentVariable($script:BowerbirdLlmDefaults[$resolved+'UrlEnv'])}
+ if([string]::IsNullOrWhiteSpace($model)){$model=$script:BowerbirdLlmDefaults[$resolved+'Model']}
+ if($null -eq $url){$url=''}
+ return [pscustomobject]@{Profile=$resolved;Url=$url.Trim().TrimEnd('/');Model=$model}
+}
+function Assert-BowerbirdLlmUrl {
+ param($Config)
+ if([string]::IsNullOrWhiteSpace($Config.Url)){
+  throw ("No endpoint URL configured for profile $($Config.Profile). Set $($script:BowerbirdLlmDefaults[$Config.Profile+'UrlEnv']) (or LLM_URL) in Config\bowerbird.env.")
+ }
 }
 function Get-BowerbirdLlmToken {
- [CmdletBinding()]param([ValidateSet('Auto','Grok','GenAi')][string]$ForProfile='Auto',[switch]$AllowPrompt)
+ [CmdletBinding()]param([string]$ForProfile='Auto',[switch]$AllowPrompt)
+ $ForProfile=ConvertTo-BowerbirdLlmProfile -Profile $ForProfile
  if($ForProfile -eq 'Auto'){$ForProfile=(Get-BowerbirdLlmConfig).Profile}
- if($ForProfile -eq 'GenAi'){$envTarget='GENAI_TOKEN';$defaultItem='genapi';$itemKeys=@('BOWERBIRD_LAZARETTE_ITEM_GenAi','BOWERBIRD_ARC_ITEM_GenAi','HALYARD_LAZARETTE_ITEM_GenAi','HALYARD_LAZARETTE_ITEM_Llm','CASCADE_ARC_ITEM_GenAi','CASCADE_ARC_ITEM_Llm')}
- else{$envTarget='DATABRICKS_TOKEN';$defaultItem='advana-api';$itemKeys=@('BOWERBIRD_LAZARETTE_ITEM_Grok','BOWERBIRD_ARC_ITEM_Grok','HALYARD_LAZARETTE_ITEM_Grok','CASCADE_ARC_ITEM_Grok')}
- $existing=[Environment]::GetEnvironmentVariable($envTarget);if(-not [string]::IsNullOrWhiteSpace($existing)){return $existing.Trim()}
+ $spec=$script:BowerbirdLlmVaultItems[$ForProfile]
+ $envTarget=@($script:BowerbirdLlmTokenEnv[$ForProfile])[0]
+ $existing=Get-BowerbirdLlmEnvToken -ForProfile $ForProfile;if($existing){return $existing}
  if(-not [string]::IsNullOrWhiteSpace($env:LLM_TOKEN)){return $env:LLM_TOKEN.Trim()}
- # Vault item name: Bowerbird's own name first (then its former BOWERBIRD_ARC_ITEM_* name), then
- # Halyard's shared HALYARD_LAZARETTE_ITEM_* (then its former CASCADE_ARC_ITEM_*), else the canonical item.
- $lazaretteItem=$null
- foreach($k in $itemKeys){$v=[Environment]::GetEnvironmentVariable($k);if(-not [string]::IsNullOrWhiteSpace($v)){$lazaretteItem=$v.Trim();break}}
- if(-not $lazaretteItem){$lazaretteItem=$defaultItem}
+ # Vault item name: an override from EnvKeys (in order), else the canonical item and then its former names.
+ $candidates=@()
+ foreach($k in $spec.EnvKeys){$v=[Environment]::GetEnvironmentVariable($k);if(-not [string]::IsNullOrWhiteSpace($v)){$candidates=@($v.Trim());break}}
+ if($candidates.Count -eq 0){$candidates=@($spec.Name)+@($spec.Legacy)}
  if(Get-Command Import-BowerbirdLazaretteSession -ErrorAction SilentlyContinue){$null=Import-BowerbirdLazaretteSession -Quiet}
  if(Get-Command Get-BowerbirdLazaretteSecretByName -ErrorAction SilentlyContinue){
-  try{$got=Get-BowerbirdLazaretteSecretByName -ServiceName $lazaretteItem;if(-not [string]::IsNullOrWhiteSpace($got)){$plain=[string]$got.Trim();Set-Item -Path "Env:$envTarget" -Value $plain;return $plain}}catch{Write-Verbose $_.Exception.Message}
+  foreach($lazaretteItem in $candidates){
+   try{$got=Get-BowerbirdLazaretteSecretByName -ServiceName $lazaretteItem;if(-not [string]::IsNullOrWhiteSpace($got)){$plain=[string]$got.Trim();Set-Item -Path "Env:$envTarget" -Value $plain;return $plain}}catch{Write-Verbose $_.Exception.Message}
+  }
  }
  if($AllowPrompt -and [Environment]::UserInteractive){
   $secure=Read-Host 'Token' -AsSecureString
@@ -45,8 +84,9 @@ function Get-BowerbirdLlmToken {
  throw "No LLM token for profile $ForProfile. Configure Lazarette or $envTarget."
 }
 function Invoke-BowerbirdChat {
- [CmdletBinding()]param([Parameter(Mandatory)][object[]]$Messages,[ValidateSet('Auto','Grok','GenAi')][string]$Profile='Auto',[string]$Model,[int]$MaxTokens=1024,[double]$Temperature=0.15,[int]$TimeoutSec=180)
+ [CmdletBinding()]param([Parameter(Mandatory)][object[]]$Messages,[string]$Profile='Auto',[string]$Model,[int]$MaxTokens=1024,[double]$Temperature=0.15,[int]$TimeoutSec=180)
  $cfg=Get-BowerbirdLlmConfig -Profile $Profile
+ Assert-BowerbirdLlmUrl -Config $cfg
  if($Model){$cfg.Model=$Model}
  $token=Get-BowerbirdLlmToken -ForProfile $cfg.Profile
  $token=$token.Trim().Trim("'").Trim('"')

@@ -4,7 +4,7 @@
 
 **Local-first file intelligence and screenshot renaming for Windows PowerShell 5.1 and your existing web browser.**
 
-[Windows PowerShell CI](https://github.com/sun-of-anton/bowerbird/actions/workflows/windows-powershell.yml) · [Source](https://github.com/sun-of-anton/bowerbird/tree/main)
+[Windows PowerShell CI](https://github.com/fleethacker-data-crucible/Bowerbird/actions/workflows/windows-powershell.yml) · [Source](https://github.com/fleethacker-data-crucible/Bowerbird/tree/main)
 
 No Python, Node, npm, Git executable, or admin-installed package is required on the target workstation. The development pipeline uses Node only to check syntax on GitHub-hosted Windows runners.
 
@@ -118,7 +118,7 @@ If the GUI will not launch at all, run `Start-Bowerbird.bat diagnostics`. See [D
 | Journaling | Per-step durable journal, archive of previous runs, source hash preconditions and checked undo |
 | Insights | Category inventory, indexed bytes, duplicate groups, extraction failures |
 | Local Agents | Read-only organization, duplication, and index-quality analysis; usable without cloud AI |
-| AI Chat | Optional Lazarette/GenAI/Grok integration, streamed browser output when provider supports SSE; fallback JSON responses |
+| AI Chat | Optional Lazarette/AI endpoint/Grok integration, streamed browser output when provider supports SSE; fallback JSON responses |
 | Code Insights | Language and line statistics by extension |
 | Diagnostics & Feedback | Halyard-style session recorder, automatic browser/API errors, local issue reporting and resolution, request IDs, health checks, redacted support export |\n| Tests | Windows PowerShell parser check, JavaScript/DOM contract tests, smoke and real localhost HTTP API tests on both transports |
 

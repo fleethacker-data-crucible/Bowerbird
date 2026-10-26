@@ -12,11 +12,12 @@ function Invoke-BowerbirdStreamingChat {
  [CmdletBinding()]param(
   [Parameter(Mandatory)]$Response,
   [Parameter(Mandatory)][object[]]$Messages,
-  [ValidateSet('Auto','Grok','GenAi')][string]$Profile='Auto',
+  [string]$Profile='Auto',
   [ValidateRange(32,8192)][int]$MaxTokens=1400,
   [ValidateRange(5,300)][int]$TimeoutSeconds=120
  )
  $cfg=Get-BowerbirdLlmConfig -Profile $Profile
+ Assert-BowerbirdLlmUrl -Config $cfg
  $token=Get-BowerbirdLlmToken -ForProfile $cfg.Profile
  $token=$token.Trim().Trim("'").Trim('"') -replace '[\r\n]',''
  if($token -match '^(?i)Bearer\s+(.+)$'){$token=$Matches[1]}
