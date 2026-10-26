@@ -251,7 +251,7 @@ function Invoke-Api([string]$Route,$Body){
    $checks=New-Object 'System.Collections.Generic.List[object]'
    $checks.Add(@{name='Local backend';ok=$true;detail='Loopback server is responsive'})
    $checks.Add(@{name='Active workspace';ok=(Test-Path -LiteralPath $script:AllowedRoot -PathType Container);detail='Folder availability'})
-   $checks.Add(@{name='Browser assets';ok=((Test-Path (Join-Path $script:AppRoot 'Web\index.html')) -and (Test-Path (Join-Path $script:AppRoot 'Web\app.js')) -and (Test-Path (Join-Path $script:AppRoot 'Web\diagnostics.js')) -and (Test-Path (Join-Path $script:AppRoot 'Web\lifecycle.js')));detail='Static UI files'})
+   $checks.Add(@{name='Browser assets';ok=((Test-Path (Join-Path $script:AppRoot 'Web\index.html')) -and (Test-Path (Join-Path $script:AppRoot 'Web\app.js')) -and (Test-Path (Join-Path $script:AppRoot 'Web\diagnostics.js')) -and (Test-Path (Join-Path $script:AppRoot 'Web\lifecycle.js')) -and (@($script:StaticFiles.Values|Where-Object {-not (Test-Path (Join-Path $script:AppRoot $_.File))}).Count -eq 0));detail='Static UI files'})
    $checks.Add(@{name='Application log';ok=(Test-Path -LiteralPath $script:LogFile);detail='Local diagnostic log'})
    $checks.Add(@{name='Local index';ok=(Test-Path -LiteralPath $script:IndexPath);detail='An index is optional until Build Index'})
    $checks.Add(@{name='Cloud AI permission';ok=[bool]$AllowCloudAI;detail='Off by default; not an endpoint connectivity test'})
@@ -410,6 +410,22 @@ function Get-BowerbirdMessages($Body){
   @{role='user';content=($context+[char]10+$prompt)}
  )
 }
+# Browser assets served by GET, by URL path. Only these files are served.
+$script:StaticFiles=@{
+ '/app.js'=@{File='Web\app.js';Type='application/javascript; charset=utf-8'}
+ '/lifecycle.js'=@{File='Web\lifecycle.js';Type='application/javascript; charset=utf-8'}
+ '/diagnostics.js'=@{File='Web\diagnostics.js';Type='application/javascript; charset=utf-8'}
+ '/shell.js'=@{File='Web\shell.js';Type='application/javascript; charset=utf-8'}
+ '/icons.js'=@{File='Web\icons.js';Type='application/javascript; charset=utf-8'}
+ '/style.css'=@{File='Web\style.css';Type='text/css; charset=utf-8'}
+ '/vendor/fleet/fleet.css'=@{File='Web\vendor\fleet\fleet.css';Type='text/css; charset=utf-8'}
+ '/mark.svg'=@{File='assets\brand\mark.svg';Type='image/svg+xml'}
+ # The emblem (backdrop made transparent, one per theme) and the favicon / icon cut from its circle.
+ '/brand/emblem-dark.png'=@{File='Web\brand\emblem-dark.png';Type='image/png'}
+ '/brand/emblem-light.png'=@{File='Web\brand\emblem-light.png';Type='image/png'}
+ '/brand/icon-256.png'=@{File='Web\brand\icon-256.png';Type='image/png'}
+ '/favicon.ico'=@{File='Web\brand\favicon.ico';Type='image/x-icon'}
+}
 $url="http://127.0.0.1:$Port/"
 Write-Host "Bowerbird Studio running at $url" -ForegroundColor Cyan
 Write-Host "Workspace: $script:AllowedRoot"
@@ -459,14 +475,10 @@ try{
     $html=[IO.File]::ReadAllText($page)
     $bytes=[Text.Encoding]::UTF8.GetBytes($html)
     $res.ContentType='text/html; charset=utf-8';$res.OutputStream.Write($bytes,0,$bytes.Length)
-   }elseif($req.Url.AbsolutePath -eq '/app.js' -and $req.HttpMethod -eq 'GET'){
-    $bytes=[IO.File]::ReadAllBytes((Join-Path $AppRoot 'Web\app.js'));$res.ContentType='application/javascript; charset=utf-8';$res.OutputStream.Write($bytes,0,$bytes.Length)
-   }elseif($req.Url.AbsolutePath -eq '/lifecycle.js' -and $req.HttpMethod -eq 'GET'){
-    $bytes=[IO.File]::ReadAllBytes((Join-Path $AppRoot 'Web\lifecycle.js'));$res.ContentType='application/javascript; charset=utf-8';$res.OutputStream.Write($bytes,0,$bytes.Length)
-   }elseif($req.Url.AbsolutePath -eq '/diagnostics.js' -and $req.HttpMethod -eq 'GET'){
-    $bytes=[IO.File]::ReadAllBytes((Join-Path $AppRoot 'Web\diagnostics.js'));$res.ContentType='application/javascript; charset=utf-8';$res.OutputStream.Write($bytes,0,$bytes.Length)
-   }elseif($req.Url.AbsolutePath -eq '/style.css' -and $req.HttpMethod -eq 'GET'){
-    $bytes=[IO.File]::ReadAllBytes((Join-Path $AppRoot 'Web\style.css'));$res.ContentType='text/css; charset=utf-8';$res.OutputStream.Write($bytes,0,$bytes.Length)
+   }elseif($script:StaticFiles.ContainsKey($req.Url.AbsolutePath) -and $req.HttpMethod -eq 'GET'){
+    # Fixed allow-list of browser assets (see $script:StaticFiles); nothing else on disk is served.
+    $asset=$script:StaticFiles[$req.Url.AbsolutePath]
+    $bytes=[IO.File]::ReadAllBytes((Join-Path $AppRoot $asset.File));$res.ContentType=$asset.Type;$res.OutputStream.Write($bytes,0,$bytes.Length)
    }elseif($req.Url.AbsolutePath -eq '/api/heartbeat' -and $req.HttpMethod -eq 'POST'){
     # The leaving beacon (navigator.sendBeacon) cannot set headers, so this one route also accepts
     # the session token as "session" in the JSON body. Never in the query string; bodies are never logged.

@@ -1,114 +1,120 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bowerbird Studio</title><link rel="stylesheet" href="/style.css"></head>
+<html lang="en" data-app="bowerbird"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><title>Bowerbird Studio</title><link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48 256x256"><link rel="icon" type="image/png" sizes="256x256" href="/brand/icon-256.png"><link rel="stylesheet" href="/vendor/fleet/fleet.css"><link rel="stylesheet" href="/style.css"><script src="/shell.js"></script></head>
 <body>
-<noscript><div class="panel" style="margin:12px">Bowerbird Studio requires JavaScript enabled in this browser. If scripts are restricted, use Start-Bowerbird.bat diagnostics and contact your workstation administrator.</div></noscript>
+<noscript><div class="panel noscript">Bowerbird Studio requires JavaScript enabled in this browser. If scripts are restricted, use Start-Bowerbird.bat diagnostics and contact your workstation administrator.</div></noscript>
 <div class="shell">
- <aside class="sidebar">
-  <div class="brand"><span class="brand-mark">◈</span><div><strong>BOWERBIRD</strong><small>STUDIO / v2.3</small></div></div>
+ <aside class="sidebar" aria-label="Bowerbird">
+  <div class="brand" title="Bowerbird Studio"><img class="brand-emblem only-dark" src="/brand/emblem-dark.png" alt="Bowerbird" width="184" height="184"><img class="brand-emblem only-light" src="/brand/emblem-light.png" alt="Bowerbird" width="184" height="184"><img class="brand-icon" src="/brand/icon-256.png" alt="Bowerbird" width="40" height="40"></div>
   <div class="nav-label">WORKSPACE</div>
-  <nav aria-label="Primary navigation">
-   <button class="nav active" data-view="files">▤ <span>Explorer</span></button>
-   <button class="nav" data-view="search">⌕ <span>Intelligent Search</span></button>
-   <button class="nav" data-view="insights">▥ <span>Insights & Agents</span></button>
-   <button class="nav" data-view="duplicates">◈ <span>Duplicates</span></button>
-   <button class="nav" data-view="organize">▦ <span>Organize</span></button>
-   <button class="nav" data-view="rename">▧ <span>Smart Rename</span></button>
-   <button class="nav" data-view="code">⌘ <span>Code Insights</span></button>
-   <button class="nav" data-view="assistant">✧ <span>AI Assistant</span></button>
-   <button class="nav" data-view="diagnostics">☷ <span>Diagnostics &amp; Feedback</span></button>
-   <button id="end-session" class="nav-end" type="button" title="Stop the local Bowerbird server and close this session">⏻ <span>End session</span></button>
+  <nav class="fl-nav sidebar-nav" aria-label="Primary navigation">
+   <button class="nav active" data-view="files" aria-current="page" title="Explorer"><span data-icon="explorer" data-icon-size="20"></span><span>Explorer</span></button>
+   <button class="nav" data-view="search" title="Intelligent Search"><span data-icon="search" data-icon-size="20"></span><span>Intelligent Search</span></button>
+   <button class="nav" data-view="insights" title="Insights &amp; Agents"><span data-icon="insights" data-icon-size="20"></span><span>Insights &amp; Agents</span></button>
+   <button class="nav" data-view="duplicates" title="Duplicates"><span data-icon="duplicates" data-icon-size="20"></span><span>Duplicates</span></button>
+   <button class="nav" data-view="organize" title="Organize"><span data-icon="organize" data-icon-size="20"></span><span>Organize</span></button>
+   <button class="nav" data-view="rename" title="Smart Rename"><span data-icon="rename" data-icon-size="20"></span><span>Smart Rename</span></button>
+   <button class="nav" data-view="code" title="Code Insights"><span data-icon="code" data-icon-size="20"></span><span>Code Insights</span></button>
+   <button class="nav" data-view="assistant" title="AI Assistant"><span data-icon="assistant" data-icon-size="20"></span><span>AI Assistant</span></button>
+   <button class="nav" data-view="diagnostics" title="Diagnostics &amp; Feedback"><span data-icon="diagnostics" data-icon-size="20"></span><span>Diagnostics &amp; Feedback</span></button>
   </nav>
-  <div class="sidebar-bottom"><div class="status-dot"></div><span id="connection">Connecting…</span><small id="workspace">Local workspace</small></div>
+  <nav class="fl-nav sidebar-foot" aria-label="Session and display">
+   <button id="shortcuts-open" type="button" title="Keyboard shortcuts (?)"><span data-icon="keyboard" data-icon-size="20"></span><span>Shortcuts</span></button>
+   <button id="theme-toggle" type="button" title="Theme"><span data-icon="themeSystem" data-icon-size="20"></span><span id="theme-label">Follow Windows</span></button>
+   <button id="end-session" class="nav-end" type="button" title="Stop the local Bowerbird server and close this session"><span data-icon="power" data-icon-size="20"></span><span>End session</span></button>
+   <button id="sidebar-toggle" type="button" title="Collapse the sidebar" aria-expanded="true"><span data-icon="collapse" data-icon-size="20"></span><span>Collapse</span></button>
+  </nav>
  </aside>
- <main>
-  <header class="topbar"><div><span class="eyebrow">YOUR FILES, INTELLIGENTLY ORGANIZED</span><h1 id="page-title">File Explorer</h1></div><div class="top-actions"><button id="diagnostics" class="ghost">⚙ Diagnostics</button><button id="refresh" class="ghost">↻ Refresh</button><button id="index" class="primary">✦ Build Index</button></div></header>
-  <div id="notice" role="status" aria-live="polite"></div>
-  <section id="workspace-panel" class="panel workspace-panel" aria-labelledby="workspace-heading">
+ <div class="main-column">
+  <header class="topbar"><h1 id="page-title">File Explorer</h1><div class="top-actions"><button id="diagnostics" class="ghost fl-btn fl-btn--ghost" type="button"><span data-icon="settings"></span>Diagnostics</button><button id="refresh" class="ghost fl-btn fl-btn--secondary" type="button"><span data-icon="refresh"></span>Refresh</button><button id="index" class="primary fl-btn fl-btn--primary" type="button"><span data-icon="index"></span>Build Index</button></div></header>
+  <main class="content">
+  <div id="notice" class="fl-toast-host" role="status" aria-live="polite"></div>
+  <section id="workspace-panel" class="panel fl-card workspace-panel" aria-labelledby="workspace-heading">
    <div class="workspace-intro"><div><span class="eyebrow">SCAN LOCATION</span><h2 id="workspace-heading">Folder to scan</h2><p class="muted workspace-description">Select a folder on your Windows PC. You can change this at any time without restarting Bowerbird.</p></div><span id="workspace-current" class="workspace-current" title="Current scan folder">Loading folder…</span></div>
    <form id="workspace-form" class="workspace-form">
     <label for="workspace-path" class="sr-only">Full folder path</label>
-    <input id="workspace-path" name="workspace-path" type="text" placeholder="C:\Users\You\Pictures\Screenshots" spellcheck="false" autocomplete="off" aria-describedby="workspace-help" required>
-    <button id="browse-folder" class="ghost" type="button"><span aria-hidden="true">▣</span> Browse Folder…</button>
-    <button id="change-folder" class="primary" type="submit">Use This Folder</button>
+    <input id="workspace-path" class="fl-input" name="workspace-path" type="text" placeholder="C:\Users\You\Pictures\Screenshots" spellcheck="false" autocomplete="off" aria-describedby="workspace-help" required>
+    <button id="browse-folder" class="ghost fl-btn fl-btn--secondary" type="button"><span data-icon="browse"></span>Browse Folder…</button>
+    <button id="change-folder" class="primary fl-btn fl-btn--primary" type="submit">Use This Folder</button>
    </form>
    <p class="workspace-help" id="workspace-help">Browse opens a Windows folder selector. If it's unavailable, paste or type a full directory path and click Use This Folder. Previous scan results and pending moves won't carry over.</p>
   </section>
   <section class="view active" id="view-files">
-   <div class="toolbar"><div class="breadcrumb"><button id="up" class="ghost">↑ Up</button><span id="cwd">/</span></div><div class="toolbar-options"><label class="check"><input type="checkbox" id="recurse" checked> Include subfolders</label><label class="check"><input type="checkbox" id="content-index"> Index file contents locally</label><label class="check"><input type="checkbox" id="ocr-index"> Use available OCR engine</label></div></div>
-   <div class="stats"><article><small>Visible items</small><strong id="file-count">—</strong></article><article><small>Workspace</small><strong id="index-state">Not indexed</strong></article><article><small>AI Mode</small><strong id="ai-state">Disabled</strong></article><article><small>Storage indexed</small><strong id="size-state">—</strong></article></div>
-   <div class="panel"><div class="panel-heading"><h2>Files & Folders</h2><span>Double-click folders to explore · Select text files to preview</span></div><div class="table-scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Size</th><th>Modified</th></tr></thead><tbody id="file-table"></tbody></table></div></div>
-   <div class="panel preview"><div class="panel-heading"><h2>File Preview</h2><span id="preview-name">Select a file</span></div><div id="media-preview"></div><pre id="preview-text">No file selected</pre><div class="formline"><button class="ghost" id="related" disabled>Find related files</button></div><div id="related-results" class="results"></div></div>
+   <div id="welcome" class="welcome fl-card fl-empty"><img class="welcome-emblem only-dark" src="/brand/emblem-dark.png" alt="Bowerbird" width="300" height="300"><img class="welcome-emblem only-light" src="/brand/emblem-light.png" alt="Bowerbird" width="300" height="300"><h2>Every treasure, found and arranged.</h2><p class="muted">Choose a folder and build its index. Bowerbird then finds duplicates, suggests names and answers questions about your files, all on this PC.</p><div class="welcome-actions"><button id="welcome-index" class="primary fl-btn fl-btn--primary fl-btn--lg" type="button"><span data-icon="index"></span>Build index</button><button id="welcome-browse" class="ghost fl-btn fl-btn--secondary fl-btn--lg" type="button"><span data-icon="browse"></span>Choose a folder</button></div></div>
+   <div class="toolbar"><div class="breadcrumb"><button id="up" class="ghost fl-btn fl-btn--ghost" type="button"><span data-icon="up"></span>Up</button><span id="cwd">/</span></div><div class="toolbar-options"><label class="check"><input type="checkbox" id="recurse" checked> Include subfolders</label><label class="check"><input type="checkbox" id="content-index"> Index file contents locally</label><label class="check"><input type="checkbox" id="ocr-index"> Use available OCR engine</label></div></div>
+   <div class="stats"><article class="fl-card"><small>Visible items</small><strong id="file-count">—</strong></article><article class="fl-card"><small>Workspace</small><strong id="index-state">Not indexed</strong></article><article class="fl-card"><small>AI Mode</small><strong id="ai-state">Disabled</strong></article><article class="fl-card"><small>Storage indexed</small><strong id="size-state">—</strong></article></div>
+   <div class="panel fl-card"><div class="panel-heading"><h2>Files &amp; Folders</h2><span>Double-click folders to explore · Select text files to preview</span></div><div class="table-scroll"><table class="fl-table"><thead><tr><th>Name</th><th>Type</th><th class="num">Size</th><th>Modified</th></tr></thead><tbody id="file-table"></tbody></table></div></div>
+   <div class="panel fl-card preview"><div class="panel-heading"><h2>File Preview</h2><span id="preview-name">Select a file</span></div><div id="media-preview"></div><pre id="preview-text">No file selected</pre><div class="formline"><button class="ghost fl-btn fl-btn--secondary" id="related" type="button" disabled>Find related files</button></div><div id="related-results" class="results"></div></div>
   </section>
   <section class="view" id="view-insights">
-   <div class="stats"><article><small>Indexed files</small><strong id="insight-files">—</strong></article><article><small>Total size</small><strong id="insight-size">—</strong></article><article><small>Exact duplicate groups</small><strong id="insight-dupes">—</strong></article><article><small>Index errors</small><strong id="insight-errors">—</strong></article></div>
-   <div class="panel"><div class="panel-heading"><h2>File Inventory</h2><span>Summary from the local index</span></div><div id="category-results" class="category-grid muted">Build an index to see your inventory.</div></div>
-   <div class="panel"><div class="panel-heading"><h2>Local Intelligence Agents</h2><span>Read-only reports. No external requests.</span></div><p class="muted">Specialized analysis of classification, duplicate cleanup opportunities, and indexing errors. Actions stay human-approved.</p>
-   <div class="formline"><button class="primary agent-btn" data-agent="triage">▦ Organization Analyst</button><button class="ghost agent-btn" data-agent="cleanup">◈ Duplicate Investigator</button><button class="ghost agent-btn" data-agent="audit">⚑ Privacy & Quality Auditor</button></div><div id="agent-results" class="results muted">Choose an agent to generate a report.</div></div>
+   <div class="stats"><article class="fl-card"><small>Indexed files</small><strong id="insight-files">—</strong></article><article class="fl-card"><small>Total size</small><strong id="insight-size">—</strong></article><article class="fl-card"><small>Exact duplicate groups</small><strong id="insight-dupes">—</strong></article><article class="fl-card"><small>Index errors</small><strong id="insight-errors">—</strong></article></div>
+   <div class="panel fl-card"><div class="panel-heading"><h2>File Inventory</h2><span>Summary from the local index</span></div><div id="category-results" class="category-grid muted">Build an index to see your inventory.</div></div>
+   <div class="panel fl-card"><div class="panel-heading"><h2>Local Intelligence Agents</h2><span>Read-only reports. No external requests.</span></div><p class="muted">Specialized analysis of classification, duplicate cleanup opportunities, and indexing errors. Actions stay human-approved.</p>
+   <div class="formline"><button class="primary fl-btn fl-btn--primary agent-btn" data-agent="triage" type="button"><span data-icon="triage"></span>Organization Analyst</button><button class="ghost fl-btn fl-btn--secondary agent-btn" data-agent="cleanup" type="button"><span data-icon="duplicates"></span>Duplicate Investigator</button><button class="ghost fl-btn fl-btn--secondary agent-btn" data-agent="audit" type="button"><span data-icon="audit"></span>Privacy &amp; Quality Auditor</button></div><div id="agent-results" class="results muted">Choose an agent to generate a report.</div></div>
   </section>
-  <section class="view" id="view-search"><div class="panel"><div class="panel-heading"><h2>Search indexed content</h2><span>Local keyword relevance ranking</span></div><form id="search-form" class="formline"><input id="search-query" placeholder="Find design notes, scripts, requirements…" required><button class="primary">Search</button></form><div id="search-results" class="results muted">Build an index, then search filenames and extracted text.</div></div></section>
-  <section class="view" id="view-duplicates"><div class="panel"><div class="panel-heading"><h2>Duplicate Detection</h2><span>Review only. Nothing is deleted automatically.</span></div><div class="formline"><button id="exact" class="primary">Find exact duplicates</button><button id="visual" class="ghost">Find visually similar images</button></div><div id="duplicate-results" class="results muted">Choose a detection mode.</div></div></section>
+  <section class="view" id="view-search"><div class="panel fl-card"><div class="panel-heading"><h2>Search indexed content</h2><span>Local keyword relevance ranking</span></div><form id="search-form" class="formline"><input id="search-query" class="fl-input" placeholder="Find design notes, scripts, requirements…" required><button class="primary fl-btn fl-btn--primary"><span data-icon="search"></span>Search</button></form><div id="search-results" class="results muted">Build an index, then search filenames and extracted text.</div></div></section>
+  <section class="view" id="view-duplicates"><div class="panel fl-card"><div class="panel-heading"><h2>Duplicate Detection</h2><span>Review only. Nothing is deleted automatically.</span></div><div class="formline"><button id="exact" class="primary fl-btn fl-btn--primary" type="button">Find exact duplicates</button><button id="visual" class="ghost fl-btn fl-btn--secondary" type="button">Find visually similar images</button></div><div id="duplicate-results" class="results muted">Choose a detection mode.</div></div></section>
   <section class="view" id="view-organize">
-   <div class="panel"><div class="panel-heading"><h2>Rule-Based Organization</h2><span>Preview first, apply only after explicit confirmation</span></div>
+   <div class="panel fl-card"><div class="panel-heading"><h2>Rule-Based Organization</h2><span>Preview first, apply only after explicit confirmation</span></div>
     <p class="muted">Rules use file extensions, filename patterns, or text matches. Destination and rule folders must remain inside the workspace.</p>
-    <label>Destination folder relative to workspace<input id="destination" value="Organized"></label>
-    <label>Rules (JSON)<textarea id="rules" spellcheck="false" rows="12">[
+    <label>Destination folder relative to workspace<input id="destination" class="fl-input" value="Organized"></label>
+    <label>Rules (JSON)<textarea id="rules" class="fl-input" spellcheck="false" rows="12">[
   {"Name":"Screenshots","Extension":[".png",".jpg",".jpeg"],"Folder":"Images"},
   {"Name":"PowerShell","Extension":[".ps1",".psm1"],"Folder":"Code/PowerShell"},
   {"Name":"Documents","Extension":[".docx",".pdf",".txt"],"Folder":"Documents"}
 ]</textarea></label>
-    <div class="formline"><button class="primary" id="plan">Generate Preview Plan</button><button class="danger" id="apply" disabled>Apply Approved Plan</button><button class="ghost" id="undo">Undo Last Apply</button></div>
+    <div class="formline"><button class="primary fl-btn fl-btn--primary" id="plan" type="button">Generate Preview Plan</button><button class="danger fl-btn fl-btn--danger" id="apply" type="button" disabled>Apply Approved Plan</button><button class="ghost fl-btn fl-btn--secondary" id="undo" type="button">Undo Last Apply</button></div>
     <div id="plan-results" class="results muted">No proposed moves yet.</div><p class="muted">Previous move journals are archived in the application Data/history folder. Undo checks the file hash before restoring.</p>
    </div>
   </section>
-  <section class="view" id="view-rename"><div class="panel">
-   <div class="panel-heading"><h2>Smart Screenshot & Image Renamer</h2><span>Metadata first · optional consented visual AI</span></div>
+  <section class="view" id="view-rename"><div class="panel fl-card">
+   <div class="panel-heading"><h2>Smart Screenshot &amp; Image Renamer</h2><span>Metadata first · optional consented visual AI</span></div>
    <p class="muted">Uses the original Bowerbird naming pipeline: image metadata and filename heuristics, optionally followed by the approved vision model. Preview every proposed rename before applying.</p>
    <label class="check"><input type="checkbox" id="rename-recurse" checked> Include image subfolders</label>
    <label class="check"><input type="checkbox" id="rename-vision"> Use AI vision for uncertain images (sends image content to approved provider)</label>
-   <label>Maximum AI vision calls<input type="number" id="rename-limit" value="10" min="0" max="25"></label>
-   <div class="formline"><button class="primary" id="rename-plan">Generate Rename Proposals</button><button class="danger" id="rename-apply" disabled>Apply Approved Renames</button></div>
+   <label>Maximum AI vision calls<input type="number" id="rename-limit" class="fl-input" value="10" min="0" max="25"></label>
+   <div class="formline"><button class="primary fl-btn fl-btn--primary" id="rename-plan" type="button">Generate Rename Proposals</button><button class="danger fl-btn fl-btn--danger" id="rename-apply" type="button" disabled>Apply Approved Renames</button></div>
    <div id="rename-results" class="results muted">No rename proposals yet. AI vision requires explicit opt-in and cloud permission at launch.</div>
    </div></section>
-  <section class="view" id="view-code"><div class="panel"><div class="panel-heading"><h2>Code Insights</h2><span>Heuristic source statistics across the workspace</span></div><div class="formline"><button class="primary" id="analyze-code">Analyze Source Files</button></div><div id="code-results" class="results muted">Click Analyze to calculate language and line counts.</div></div></section>
-  <section class="view" id="view-assistant"><div class="panel chat-panel"><div class="panel-heading"><h2>Bowerbird Assistant</h2><span id="ai-hint">Opt-in cloud model integration · live streaming</span></div><div class="chat" id="messages"><div class="bubble bot">I'm your file intelligence assistant. I can explain organization rules and help interpret your index. Cloud chat must be explicitly enabled by the operator.</div></div><form id="chat-form" class="chat-input"><label class="check"><input type="checkbox" id="chat-index"> Include index summary</label><div class="formline"><textarea id="chat-prompt" rows="2" placeholder="Ask about organizing your workspace…" required></textarea><button class="primary">Send</button></div></form></div></section>
+  <section class="view" id="view-code"><div class="panel fl-card"><div class="panel-heading"><h2>Code Insights</h2><span>Heuristic source statistics across the workspace</span></div><div class="formline"><button class="primary fl-btn fl-btn--primary" id="analyze-code" type="button">Analyze Source Files</button></div><div id="code-results" class="results muted">Click Analyze to calculate language and line counts.</div></div></section>
+  <section class="view" id="view-assistant"><div class="panel fl-card chat-panel"><div class="panel-heading"><h2>Bowerbird Assistant</h2><span id="ai-hint">Opt-in cloud model integration · live streaming</span></div><div class="chat" id="messages"><div class="bubble bot">I'm your file intelligence assistant. I can explain organization rules and help interpret your index. Cloud chat must be explicitly enabled by the operator.</div></div><form id="chat-form" class="chat-input"><label class="check"><input type="checkbox" id="chat-index"> Include index summary</label><div class="formline"><textarea id="chat-prompt" class="fl-input" rows="2" placeholder="Ask about organizing your workspace…" required></textarea><button class="primary fl-btn fl-btn--primary">Send</button></div></form></div></section>
   <section class="view" id="view-diagnostics">
    <div class="diagnostics-intro">
     <div><span class="eyebrow">LOCAL TROUBLESHOOTING</span><h2>Diagnostics &amp; Feedback</h2><p class="muted">Reproduce a problem, record what happened, report broken functionality, and export a support package for review.</p></div>
-    <button class="ghost" id="diag-refresh-all" type="button">↻ Refresh Diagnostics</button>
+    <button class="ghost fl-btn fl-btn--secondary" id="diag-refresh-all" type="button"><span data-icon="refresh"></span>Refresh Diagnostics</button>
    </div>
    <div class="stats diag-stats">
-    <article><small>Recorded session events</small><strong id="diag-stat-events">0</strong></article>
-    <article><small>Captured failures</small><strong id="diag-stat-errors">0</strong></article>
-    <article><small>Saved issue reports</small><strong id="diag-stat-issues">0</strong></article>
-    <article><small>Session recorder</small><strong id="diag-stat-recording">Off</strong></article>
+    <article class="fl-card"><small>Recorded session events</small><strong id="diag-stat-events">0</strong></article>
+    <article class="fl-card"><small>Captured failures</small><strong id="diag-stat-errors">0</strong></article>
+    <article class="fl-card"><small>Saved issue reports</small><strong id="diag-stat-issues">0</strong></article>
+    <article class="fl-card"><small>Session recorder</small><strong id="diag-stat-recording">Off</strong></article>
    </div>
-   <div class="panel">
-    <div class="panel-heading"><div><h2>Session Recorder</h2><p class="muted">Record navigation, button clicks, and API outcomes while you reproduce a bug.</p></div><span id="diag-record-state" class="diag-state">Not recording</span></div>
+   <div class="panel fl-card">
+    <div class="panel-heading"><div><h2>Session Recorder</h2><p class="muted">Record navigation, button clicks, and API outcomes while you reproduce a bug.</p></div><span id="diag-record-state" class="diag-state fl-badge">Not recording</span></div>
     <div class="formline">
-     <button type="button" class="primary" id="diag-record-start">● Start Recording</button>
-     <button type="button" class="ghost" id="diag-record-stop" disabled>■ Stop</button>
-     <button type="button" class="ghost" id="diag-record-export">Export Session</button>
-     <button type="button" class="ghost" id="diag-record-clear">Clear Session</button>
-     <button type="button" class="danger" id="diag-mark-not-working">⚑ Mark Last Action Not Working</button>
+     <button type="button" class="primary fl-btn fl-btn--primary" id="diag-record-start"><span data-icon="record"></span>Start Recording</button>
+     <button type="button" class="ghost fl-btn fl-btn--secondary" id="diag-record-stop" disabled><span data-icon="stop"></span>Stop</button>
+     <button type="button" class="ghost fl-btn fl-btn--secondary" id="diag-record-export">Export Session</button>
+     <button type="button" class="ghost fl-btn fl-btn--secondary" id="diag-record-clear">Clear Session</button>
+     <button type="button" class="danger fl-btn fl-btn--danger" id="diag-mark-not-working"><span data-icon="flag"></span>Mark Last Action Not Working</button>
     </div>
     <p class="diag-privacy">Recording is memory-only and off by default. Automatic error capture stays on. Button IDs, page names, request status and timing are recorded; typed values, file contents, credentials and prompts are not.</p>
-    <div class="diag-filters"><label for="diag-event-filter">Show events</label><select id="diag-event-filter"><option value="all">All</option><option value="errors">Errors only</option><option value="actions">Actions</option><option value="api">API requests</option></select><span id="diag-last-action">Last action: none</span></div>
+    <div class="diag-filters"><label for="diag-event-filter">Show events</label><select id="diag-event-filter" class="fl-input"><option value="all">All</option><option value="errors">Errors only</option><option value="actions">Actions</option><option value="api">API requests</option></select><span id="diag-last-action">Last action: none</span></div>
     <div id="diag-timeline" class="diag-event-list" aria-live="polite">Start recording, then reproduce a problem. Errors will also appear here automatically.</div>
    </div>
    <div class="diag-columns">
-    <div class="panel">
+    <div class="panel fl-card">
      <div class="panel-heading"><div><h2>Log an Error or Broken Feature</h2><p class="muted">Explain what is wrong. Your report is saved locally so you can revisit it.</p></div></div>
      <form id="diag-issue-form" class="diag-issue-form">
       <div class="diag-field-grid">
        <label>Type of problem
-        <select id="diag-issue-kind" required><option value="not-working">Feature not working</option><option value="error">Error / crash</option><option value="wrong-result">Incorrect result</option><option value="performance">Slow / hanging</option><option value="suggestion">Improvement</option><option value="other">Other</option></select>
+        <select id="diag-issue-kind" class="fl-input" required><option value="not-working">Feature not working</option><option value="error">Error / crash</option><option value="wrong-result">Incorrect result</option><option value="performance">Slow / hanging</option><option value="suggestion">Improvement</option><option value="other">Other</option></select>
        </label>
        <label>Severity
-        <select id="diag-issue-severity" required><option value="medium">Medium</option><option value="low">Low</option><option value="high">High</option><option value="blocking">Blocking</option></select>
+        <select id="diag-issue-severity" class="fl-input" required><option value="medium">Medium</option><option value="low">Low</option><option value="high">High</option><option value="blocking">Blocking</option></select>
        </label>
       </div>
       <label>Affected feature
-       <select id="diag-issue-feature" required>
+       <select id="diag-issue-feature" class="fl-input" required>
         <option value="explorer">Explorer</option><option value="folder-picker">Change Folder / Browse</option>
         <option value="index">Build Index</option><option value="search">Intelligent Search</option>
         <option value="duplicates">Duplicates</option><option value="organize">Organize</option>
@@ -119,51 +125,70 @@
        </select>
       </label>
       <label>Issue title
-       <input type="text" id="diag-issue-title" maxlength="160" required placeholder="e.g. Build Index button returns an error">
+       <input type="text" id="diag-issue-title" class="fl-input" maxlength="160" required placeholder="e.g. Build Index button returns an error">
       </label>
       <label>What happened?
-       <textarea id="diag-issue-actual" maxlength="2500" rows="4" required placeholder="What did you click? What did Bowerbird do, or fail to do?"></textarea>
+       <textarea id="diag-issue-actual" class="fl-input" maxlength="2500" rows="4" required placeholder="What did you click? What did Bowerbird do, or fail to do?"></textarea>
       </label>
       <label>What should have happened?
-       <textarea id="diag-issue-expected" maxlength="1500" rows="2" placeholder="Describe the expected behavior"></textarea>
+       <textarea id="diag-issue-expected" class="fl-input" maxlength="1500" rows="2" placeholder="Describe the expected behavior"></textarea>
       </label>
       <label>Steps to reproduce (optional)
-       <textarea id="diag-issue-steps" maxlength="2000" rows="3" placeholder="1. Open…  2. Click…  3. Observe…"></textarea>
+       <textarea id="diag-issue-steps" class="fl-input" maxlength="2000" rows="3" placeholder="1. Open…  2. Click…  3. Observe…"></textarea>
       </label>
       <label class="check"><input type="checkbox" id="diag-issue-last" checked> Link the last recorded button/API failure (identifiers only)</label>
       <p class="diag-privacy">Only write details you're authorized to store. Reports remain in your Windows user profile, not in the Git repository. Nothing is automatically uploaded or sent to ChatGPT.</p>
-      <div class="formline"><button type="submit" class="primary" id="diag-issue-save">Save Local Issue Report</button><button type="button" class="ghost" id="diag-issue-reset">Clear Form</button></div>
+      <div class="formline"><button type="submit" class="primary fl-btn fl-btn--primary" id="diag-issue-save">Save Local Issue Report</button><button type="button" class="ghost fl-btn fl-btn--secondary" id="diag-issue-reset">Clear Form</button></div>
       <div id="diag-issue-result" role="status" aria-live="polite"></div>
      </form>
     </div>
-    <div class="panel">
-     <div class="panel-heading"><div><h2>Issue Tracker</h2><p class="muted">A local list of reported problems, including issues you marked as resolved.</p></div><button class="ghost" id="diag-issues-refresh" type="button">Refresh</button></div>
+    <div class="panel fl-card">
+     <div class="panel-heading"><div><h2>Issue Tracker</h2><p class="muted">A local list of reported problems, including issues you marked as resolved.</p></div><button class="ghost fl-btn fl-btn--secondary" id="diag-issues-refresh" type="button">Refresh</button></div>
      <div id="diag-issues" class="diag-issue-list">No reports saved yet.</div>
     </div>
    </div>
    <div class="diag-columns">
-    <div class="panel">
-     <div class="panel-heading"><div><h2>Backend Health Checks</h2><p class="muted">Quick local checks that do not contact AI providers or external sites.</p></div><button class="ghost" id="diag-health-refresh" type="button">Run Checks</button></div>
+    <div class="panel fl-card">
+     <div class="panel-heading"><div><h2>Backend Health Checks</h2><p class="muted">Quick local checks that do not contact AI providers or external sites.</p></div><button class="ghost fl-btn fl-btn--secondary" id="diag-health-refresh" type="button">Run Checks</button></div>
      <div id="diag-health" class="diag-health">Run checks to view readiness.</div>
     </div>
-    <div class="panel">
-     <div class="panel-heading"><div><h2>Server Log</h2><p class="muted">Correlated HTTP request IDs, response codes, durations, and sanitized errors.</p></div><button class="ghost" id="diag-server-refresh" type="button">Refresh Logs</button></div>
-     <div class="diag-filters"><label for="diag-server-filter">Show level</label><select id="diag-server-filter"><option value="all">All</option><option value="errors">Errors / warnings</option><option value="requests">Requests</option></select></div>
+    <div class="panel fl-card">
+     <div class="panel-heading"><div><h2>Server Log</h2><p class="muted">Correlated HTTP request IDs, response codes, durations, and sanitized errors.</p></div><button class="ghost fl-btn fl-btn--secondary" id="diag-server-refresh" type="button">Refresh Logs</button></div>
+     <div class="diag-filters"><label for="diag-server-filter">Show level</label><select id="diag-server-filter" class="fl-input"><option value="all">All</option><option value="errors">Errors / warnings</option><option value="requests">Requests</option></select></div>
      <div class="diag-event-list" id="diag-server-events">No server log loaded.</div>
     </div>
    </div>
-   <div class="panel">
+   <div class="panel fl-card">
     <div class="panel-heading"><div><h2>Support Package</h2><p class="muted">Download one JSON file containing a local session timeline, sanitized server events, and issue references.</p></div></div>
     <label class="check"><input type="checkbox" id="diag-export-notes"> Include descriptions and reproduction notes that I manually entered</label>
     <p class="diag-privacy">By default, reports omit your free-text notes. An optional export can include them. All exports should be reviewed for sensitive data before sharing. No export triggers an upload.</p>
     <div class="formline">
-     <button type="button" class="primary" id="diag-support-export">Download Support Bundle (.json)</button>
-     <button type="button" class="ghost" id="diag-support-copy">Copy Safe Summary</button>
+     <button type="button" class="primary fl-btn fl-btn--primary" id="diag-support-export">Download Support Bundle (.json)</button>
+     <button type="button" class="ghost fl-btn fl-btn--secondary" id="diag-support-copy">Copy Safe Summary</button>
     </div>
     <pre id="diag-support-preview" class="diagnostic-text" aria-label="Support package preview">The generated support bundle preview will appear here.</pre>
    </div>
   </section>
- </main>
+  </main>
+ </div>
+ <footer class="statusbar">
+  <span id="engine" class="engine" data-state="connecting" title="Connecting to the local server"><span class="engine-dot" aria-hidden="true"></span><span id="connection">Connecting</span></span>
+  <span id="bound-address" class="address" title="The address this Studio is served from">—</span>
+  <span class="status-workspace" title="Current scan folder">Workspace <span id="workspace">Local workspace</span></span>
+  <span id="app-version" class="version">Bowerbird Studio 2.3</span>
+ </footer>
 </div>
-<section id="session-ended" class="session-ended" hidden aria-live="polite"><div class="panel"><span class="eyebrow">SESSION ENDED</span><h1>Bowerbird Studio has stopped</h1><p class="muted" id="session-ended-detail">The local server is no longer running. You can close this tab.</p><p class="muted">To continue, run Start-Bowerbird.bat again.</p></div></section>
-<script src="/lifecycle.js" defer></script><script src="/diagnostics.js" defer></script><script src="/app.js" defer></script></body></html>
+<div id="shortcuts-dialog" class="modal-backdrop" hidden>
+ <div class="modal fl-dialog" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title" tabindex="-1">
+  <header class="modal-head"><h2 id="shortcuts-title">Keyboard shortcuts</h2><button type="button" class="icon-button fl-btn fl-btn--ghost" data-dialog-close title="Close (Esc)" aria-label="Close"><span data-icon="close"></span></button></header>
+  <dl class="shortcuts">
+   <div><dt><kbd>?</kbd></dt><dd>Show these shortcuts</dd></div>
+   <div><dt><kbd>Esc</kbd></dt><dd>Close this dialog</dd></div>
+   <div><dt><kbd>Tab</kbd> / <kbd>Shift+Tab</kbd></dt><dd>Move between controls</dd></div>
+   <div><dt><kbd>Enter</kbd> / <kbd>Space</kbd></dt><dd>Press the focused button</dd></div>
+   <div><dt><kbd>Enter</kbd></dt><dd>Open the focused folder or preview the focused file in Explorer</dd></div>
+  </dl>
+ </div>
+</div>
+<section id="session-ended" class="session-ended" hidden aria-live="polite"><div class="panel fl-card fl-empty"><img class="ended-emblem only-dark" src="/brand/emblem-dark.png" alt="Bowerbird" width="240" height="240"><img class="ended-emblem only-light" src="/brand/emblem-light.png" alt="Bowerbird" width="240" height="240"><span class="eyebrow">SESSION ENDED</span><h2>Bowerbird Studio has stopped</h2><p class="muted" id="session-ended-detail">The local server is no longer running. You can close this tab.</p><p class="muted">To continue, run Start-Bowerbird.bat again.</p></div></section>
+<script src="/icons.js" defer></script><script src="/lifecycle.js" defer></script><script src="/diagnostics.js" defer></script><script src="/app.js" defer></script></body></html>
