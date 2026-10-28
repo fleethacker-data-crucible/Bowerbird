@@ -29,6 +29,8 @@ Studio follows the Windows light/dark setting; the theme button in the sidebar s
 
 The second and only other BAT launcher is Start-Bowerbird-Console.bat for the original screenshot-renaming CLI.
 
+Start-Bowerbird-Console.bat also runs every Studio action as a named command for scripts and agents, such as `Start-Bowerbird-Console.bat index search --query invoice --json`. `commands --json` lists them all. See [docs/CLI.md](docs/CLI.md).
+
 To select a workspace:
 
     Start-Bowerbird.bat -Root "C:\Users\YOURNAME\Documents\Screenshots"
