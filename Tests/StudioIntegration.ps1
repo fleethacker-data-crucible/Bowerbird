@@ -66,6 +66,14 @@ try{
  Assert $status.ok 'Status endpoint'
  Assert ($status.port -eq $port) 'Returned port matches listener'
  Assert (-not $status.cloudAI) 'Cloud AI must be off by default'
+ # GET /api/commands: the command list for agents, behind the same token and Origin checks.
+ $catalog=Invoke-RestMethod -Method Get -Uri ($base+'commands') -Headers $headers -TimeoutSec 15
+ Assert ($catalog.schema -eq 'bowerbird.commands/1' -and @($catalog.commands).Count -ge 20) 'GET /api/commands lists the commands'
+ foreach($denied in @(@{},@{'X-Bowerbird-Token'='wrong'},@{'X-Bowerbird-Token'=$token;Origin='http://evil.example'})){
+  $code=0
+  try{$null=Invoke-WebRequest -Method Get -Uri ($base+'commands') -Headers $denied -UseBasicParsing -TimeoutSec 15}catch{if($_.Exception.Response){$code=[int]$_.Exception.Response.StatusCode}}
+  Assert ($code -eq 403) 'GET /api/commands needs the session token and the page origin'
+ }
  # Error and non-functionality reporting must work without an external account.
  $checks=Call 'diagnostics/health' @{}
  Assert $checks.ok 'Local diagnostics health route'

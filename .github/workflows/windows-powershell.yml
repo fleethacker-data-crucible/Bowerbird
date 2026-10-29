@@ -51,6 +51,9 @@ jobs:
       - name: Lifecycle presence rule and runtime files
         shell: powershell
         run: .\Tests\Lifecycle.ps1
+      - name: CLI/API parity
+        shell: powershell
+        run: .\Tests\CliParity.ps1
       - name: Studio HTTP.sys integration
         shell: powershell
         run: .\Tests\StudioIntegration.ps1 -Transport HttpListener
