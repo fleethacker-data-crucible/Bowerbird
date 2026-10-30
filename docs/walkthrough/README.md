@@ -15,15 +15,15 @@ Index a folder, find duplicates, and rename and organize files from reviewed pro
 
 ### 1. First launch
 
-Bowerbird Studio opens on **File Explorer**. Enter the folder to scan and select **Use This Folder**. The files and folders appear, not yet indexed.
+Bowerbird Studio opens on **File Explorer**. Enter the folder to scan and select **Use This Folder**. Until the folder is indexed, a welcome panel offers **Build index** and **Choose a folder**.
 
-![Bowerbird Studio File Explorer with the demo folder in Folder to scan, 5 visible items and the workspace not indexed yet.](../assets/walkthrough/01-first-launch.png)
+![Bowerbird Studio File Explorer with the demo folder Q:\Sample-Workspace in Folder to scan and the welcome panel with Build index and Choose a folder, before the folder is indexed.](../assets/walkthrough/01-first-launch.png)
 
 ### 2. Build the index
 
 Select **Build Index**. Files and folders appear with a preview of the selected file.
 
-![Bowerbird File Explorer after Build Index, with 5 files indexed and the demo watch-turnover-sample.txt open in File Preview.](../assets/walkthrough/02-build-index.png)
+![Bowerbird File Explorer after Build Index with local content indexing on: 5 files indexed, the notes folder open and the demo watch-turnover-sample.txt in File Preview.](../assets/walkthrough/02-build-index.png)
 
 ### 3. Search
 
@@ -47,7 +47,7 @@ Select **Build Index**. Files and folders appear with a preview of the selected 
 
 **Organize** turns JSON rules into a move plan you inspect before applying. **Undo Last Apply** reverses it.
 
-![Bowerbird Organize page with the example JSON rules and 4 proposed moves into the Organized folder, not yet applied.](../assets/walkthrough/06-organize-plan.png)
+![Bowerbird Organize page with the default JSON rules and 4 proposed moves into the Organized folder, not yet applied.](../assets/walkthrough/06-organize-plan.png)
 
 ### 7. Check health
 
@@ -59,4 +59,4 @@ Select **Build Index**. Files and folders appear with a preview of the selected 
 
 ## About these images
 
-Images live in [`docs/assets/walkthrough/`](../assets/walkthrough/), named `NN-<screen>.png` after the step they belong to. They are 1440x900 at 100% scale in the Dark (Bowerbird has one theme) theme, and show demo data only.
+Images live in [`docs/assets/walkthrough/`](../assets/walkthrough/), named `NN-<screen>.png` after the step they belong to. They are 1440x900 at 100% scale in the Night watch (dark) theme, and show demo data only. Retake them with `node docs/screenshots/capture-demo.js walkthrough` (Node and Playwright, dev machine only).
