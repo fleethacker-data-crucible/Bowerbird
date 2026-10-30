@@ -88,7 +88,7 @@ function Invoke-Api([string]$Route,$Body){
    Write-BowerbirdDiagnostic -Event ('UI_'+$event) -Message $target
    return @{ok=$true}
   }
-  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;port=$Port;transport=(Get-BowerbirdTransportName);indexExists=(Test-Path $script:IndexPath);indexEncrypted=(Test-BowerbirdIndexEncrypted -Path $script:IndexPath);cloudAI=[bool]$AllowCloudAI;version='2.3';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional','incremental-index','encrypted-index','rename','workspace-switch','workspace-picker','diagnostics','feedback','session-recording','lifecycle')}}
+  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;port=$Port;transport=(Get-BowerbirdTransportName);indexExists=(Test-Path $script:IndexPath);indexEncrypted=(Test-BowerbirdIndexEncrypted -Path $script:IndexPath);fairlead=@{enabled=(Test-BowerbirdFairleadEnabled);configured=[bool][Environment]::GetEnvironmentVariable('BOWERBIRD_FAIRLEAD_URL')};cloudAI=[bool]$AllowCloudAI;version='2.3';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional','incremental-index','encrypted-index','fairlead-optin','rename','workspace-switch','workspace-picker','diagnostics','feedback','session-recording','lifecycle')}}
   '/api/workspace/select' {
    return Set-BowerbirdWorkspace -Folder ([string]$Body.path)
   }

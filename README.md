@@ -145,12 +145,14 @@ If the GUI will not launch at all, run `Start-Bowerbird.bat diagnostics`. See [D
 - **Streaming**: The SSE bridge supports compatible providers; endpoints which decline streaming may return a complete JSON response. Model authentication still needs working approved credentials / Lazarette integration.
 - **Index encryption**: DPAPI ties the saved index to the Windows user and PC that wrote it. Another user or PC cannot read it and has to rebuild. `BOWERBIRD_INDEX_ENCRYPTION=off` keeps plaintext JSON (for example to inspect it by hand). This protects the file at rest; the running Studio still holds the index in memory, and search results show text snippets.
 - **Incremental index**: a file counts as unchanged when its path, size and modified time match the saved index. A file edited in place with the same size and a restored timestamp would be missed; use `--full` (or the *Rebuild* option) when in doubt. Asking for content or OCR the previous run did not have re-reads every file.
+- **Not verified here**: the AI paths are tested against a mock OpenAI-compatible provider with hand-written fixtures in the OpenAI wire format (`Tests\AiMock.ps1`); nothing was recorded from a live model. A real phoenix-lai or remote model, real vision quality, a running Fairlead router (its API is assumed to be OpenAI-compatible chat completions) and Lazarette-held tokens still need a hands-on check by Anthony.
+- **Vision names**: the model's suggested name is reduced to a lowercase kebab-case slug (six words at most) before it can reach a file name; an unusable reply keeps the first-pass name.
 - **Agents**: The local agents are deterministic and read-only. They are not autonomous LLM tool-call agents.
 - **Search**: Related-file matching is lexical, not neural embeddings. There is no on-device LLM included.
 
 ### AI endpoint configuration
 
-> **Intelligence router:** these endpoints will move behind the Fleet intelligence router, [Fairlead](https://github.com/fleethacker-data-crucible/Fairlead), so Bowerbird defaults to the router (which picks local phoenix-lai or a remote provider) instead of a fixed endpoint. Until then the settings below stay as they are. See [TechStack](TechStack), "Intelligence router".
+> **Intelligence router:** Bowerbird can send AI traffic through the Fleet intelligence router, [Fairlead](https://github.com/fleethacker-data-crucible/Fairlead). It is **opt-in and off by default**: nothing changes until you set `BOWERBIRD_FAIRLEAD_URL` and `BOWERBIRD_USE_FAIRLEAD=1`. The default stays the local phoenix-lai endpoint below. See [TechStack](TechStack), "Intelligence router".
 
 AI Chat and the second naming pass default to the local phoenix-lai server's OpenAI-compatible API on this PC, `http://127.0.0.1:1234/v1/chat/completions`, with model `phoenixlai` (whichever model phoenix-lai has loaded). Set these in `Config\bowerbird.env` to change it:
 
@@ -160,6 +162,10 @@ AI Chat and the second naming pass default to the local phoenix-lai server's Ope
 | `BOWERBIRD_GROK_URL` | Grok | none | Outside provider, so no URL is built in. Required for the Grok profile. |
 | `LLM_URL` | any | none | Shared override (legacy alias): wins over both variables above. |
 | `LLM_MODEL` | any | `phoenixlai` on the local default, otherwise the profile's model | Set it when an override URL needs a specific model name. |
+| `BOWERBIRD_FAIRLEAD_URL` | Fairlead | none | Full OpenAI-compatible chat-completions URL of your Fairlead router. No address is built in. Required for the Fairlead profile. |
+| `BOWERBIRD_USE_FAIRLEAD` | Auto | off | `1`, `true`, `yes` or `on` makes Auto (AI Chat, streaming, the vision rename pass) use Fairlead. With no URL set it fails with a message instead of falling back. |
+| `BOWERBIRD_FAIRLEAD_MODEL` | Fairlead | `auto` | Model name sent to the router; `LLM_MODEL` overrides it. |
+| `FAIRLEAD_TOKEN` | Fairlead | none | Optional. Fairlead holds the provider credentials, so no vault item is read; a token is sent only if you set this. |
 | `AI_ENDPOINT_TOKEN` / `LLM_TOKEN` | AiEndpoint / any | none | Optional for a local (loopback) endpoint: phoenix-lai's API key is off by default, and no `Authorization` header is sent without a token. Required for a remote endpoint, where Lazarette is also tried. |
 
 ## Recommended workflows
