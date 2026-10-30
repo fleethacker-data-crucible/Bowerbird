@@ -21,6 +21,61 @@ function Get-BowerbirdCategory {
  if($Name -match '(?i)(screenshot|screen.?shot|snip|capture)'){return 'Image'}
  return 'Other'
 }
+function ConvertFrom-BowerbirdPdfString {
+ # A PDF literal string body (without the outer parentheses): \n \r \t \b \f, \( \) \\, \ddd octal, line continuation.
+ param([string]$Text)
+ $sb=New-Object Text.StringBuilder
+ for($i=0;$i -lt $Text.Length;$i++){
+  $c=$Text[$i]
+  if($c -ne '\' -or $i+1 -ge $Text.Length){[void]$sb.Append($c);continue}
+  $i++;$n=$Text[$i]
+  switch -CaseSensitive ($n){
+   'n'{[void]$sb.Append(' ')} 'r'{[void]$sb.Append(' ')} 't'{[void]$sb.Append(' ')} 'b'{} 'f'{}
+   "`r"{if($i+1 -lt $Text.Length -and $Text[$i+1] -eq "`n"){$i++}}
+   "`n"{}
+   default{
+    if($n -match '[0-7]'){
+     $digits=[string]$n
+     while($digits.Length -lt 3 -and $i+1 -lt $Text.Length -and $Text[$i+1] -match '[0-7]'){$i++;$digits+=$Text[$i]}
+     [void]$sb.Append([char]([Convert]::ToInt32($digits,8) -band 0xFF))
+    }else{[void]$sb.Append($n)}
+   }
+  }
+ }
+ return $sb.ToString()
+}
+function Get-BowerbirdPdfBlockText {
+ # Text-showing operators inside one BT..ET block: (text) Tj, (text) ' and ", <hex> Tj, and [(a) -20 (b)] TJ.
+ # In a TJ array a large negative offset is a word gap; a small one is kerning and adds no space.
+ param([string]$Block)
+ $str='\((?:\\.|[^\\)])*\)'
+ $pattern='(?s)(?<arr>\[(?:'+$str+'|<[0-9A-Fa-f\s]*>|[^\]\(<])*\])\s*TJ|(?<lit>'+$str+')\s*(?:Tj|''|")|(?<hex><[0-9A-Fa-f\s]*>)\s*Tj'
+ $sb=New-Object Text.StringBuilder
+ foreach($op in [regex]::Matches($Block,$pattern)){
+  if($op.Groups['arr'].Success){
+   foreach($part in [regex]::Matches($op.Groups['arr'].Value,'('+$str+')|<([0-9A-Fa-f\s]*)>|(-?\d+(?:\.\d+)?)')){
+    if($part.Groups[1].Success){$s=$part.Groups[1].Value;[void]$sb.Append((ConvertFrom-BowerbirdPdfString $s.Substring(1,$s.Length-2)))}
+    elseif($part.Groups[2].Success){[void]$sb.Append((ConvertFrom-BowerbirdPdfHex $part.Groups[2].Value))}
+    elseif([double]::Parse($part.Groups[3].Value,[Globalization.CultureInfo]::InvariantCulture) -le -200){[void]$sb.Append(' ')}
+   }
+  }elseif($op.Groups['lit'].Success){$s=$op.Groups['lit'].Value;[void]$sb.Append((ConvertFrom-BowerbirdPdfString $s.Substring(1,$s.Length-2)))}
+  elseif($op.Groups['hex'].Success){[void]$sb.Append((ConvertFrom-BowerbirdPdfHex $op.Groups['hex'].Value.Trim('<','>')))}
+  [void]$sb.Append(' ')
+ }
+ return $sb.ToString()
+}
+function ConvertFrom-BowerbirdPdfHex {
+ # Single-byte hex text only. Two-byte (Identity-H / CID) fonts need the font's map and are not decoded here.
+ param([string]$Hex)
+ $h=($Hex -replace '\s','')
+ if($h.Length -lt 2 -or $h.Length % 2){return ''}
+ $sb=New-Object Text.StringBuilder
+ for($i=0;$i -lt $h.Length;$i+=2){
+  $b=[Convert]::ToInt32($h.Substring($i,2),16)
+  if($b -ge 32 -and $b -lt 127){[void]$sb.Append([char]$b)}
+ }
+ return $sb.ToString()
+}
 function Get-BowerbirdPdfText {
  [CmdletBinding()]param([Parameter(Mandatory)][string]$Path,[int]$MaxCharacters=120000)
  # Lightweight PDF text best-effort. Doesn't pretend to decode all font encodings.
@@ -29,6 +84,7 @@ function Get-BowerbirdPdfText {
  $latin=[Text.Encoding]::GetEncoding(28591)
  $raw=$latin.GetString($bytes)
  if(-not $raw.StartsWith('%PDF-')){return ''}
+ if($raw -match '/Encrypt\b'){return ''}   # encrypted streams are not decoded; never index their cipher text
  $content=New-Object Text.StringBuilder
  # Uncompressed text streams and zlib FlateDecode are supported.
  $segments=[regex]::Matches($raw,'(?s)(?<dict><<.{0,3000}?>>)\s*stream\r?\n(?<data>.*?)\r?\n?endstream')
@@ -54,34 +110,51 @@ function Get-BowerbirdPdfText {
    }catch{continue}
   }
   foreach($block in [regex]::Matches($data,'(?s)\bBT\b(.*?)\bET\b')){
-   foreach($value in [regex]::Matches($block.Groups[1].Value,'\((?<text>(?:\\.|[^\\)])*)\)')){
-    $t=$value.Groups['text'].Value
-    $t=$t.Replace('\(','(').Replace('\)',')').Replace('\n',' ').Replace('\r',' ').Replace('\t',' ').Replace('\\','\')
-    [void]$content.Append($t);[void]$content.Append(' ')
-    if($content.Length -ge $MaxCharacters){break}
-   }
+   [void]$content.Append((Get-BowerbirdPdfBlockText -Block $block.Groups[1].Value))
+   if($content.Length -ge $MaxCharacters){break}
   }
  }
  $value=$content.ToString()
  return $value.Substring(0,[Math]::Min($MaxCharacters,$value.Length))
+}
+function Get-BowerbirdOcrCommand {
+ # An approved tesseract on this PC, or $null. BOWERBIRD_OCR_PATH names the program to run (a .exe, or a
+ # .cmd/.bat wrapper); otherwise tesseract.exe on PATH. Nothing is downloaded or installed.
+ $configured=[Environment]::GetEnvironmentVariable('BOWERBIRD_OCR_PATH')
+ if(-not [string]::IsNullOrWhiteSpace($configured)){
+  $configured=$configured.Trim().Trim('"')
+  if((Test-Path -LiteralPath $configured -PathType Leaf) -and @('.exe','.cmd','.bat') -contains [IO.Path]::GetExtension($configured).ToLowerInvariant()){return $configured}
+  return $null
+ }
+ $found=Get-Command 'tesseract.exe' -ErrorAction SilentlyContinue
+ if($found){return $found.Source}
+ return $null
+}
+function Invoke-BowerbirdOcr {
+ # Runs the OCR program on one image and returns its text. Output and errors are read while it runs, so a chatty
+ # program cannot fill a pipe and hang it; a program that runs past the time limit is stopped.
+ [CmdletBinding()]param([Parameter(Mandatory)][string]$Path,[int]$MaxCharacters=120000,[int]$TimeoutMilliseconds=15000)
+ $program=Get-BowerbirdOcrCommand
+ if(-not $program){throw 'No OCR program found. Install tesseract and put it on PATH, or set BOWERBIRD_OCR_PATH.'}
+ $info=New-Object Diagnostics.ProcessStartInfo
+ $info.FileName=$program;$info.Arguments=('"'+$Path.Replace('"','')+'" stdout')
+ $info.UseShellExecute=$false;$info.RedirectStandardOutput=$true;$info.RedirectStandardError=$true;$info.CreateNoWindow=$true
+ $process=[Diagnostics.Process]::Start($info)
+ try{
+  $outTask=$process.StandardOutput.ReadToEndAsync();$errTask=$process.StandardError.ReadToEndAsync()
+  if(-not $process.WaitForExit($TimeoutMilliseconds)){try{$process.Kill()}catch{};throw 'OCR process timed out'}
+  $process.WaitForExit()
+  if($process.ExitCode -ne 0){throw ('OCR program failed (exit '+$process.ExitCode+')')}
+  $result=[string]$outTask.Result
+  return $result.Substring(0,[Math]::Min($MaxCharacters,$result.Length)).Trim()
+ }finally{$process.Dispose()}
 }
 function Get-BowerbirdExtendedText {
  [CmdletBinding()]param([Parameter(Mandatory)][string]$Path,[int]$MaxCharacters=120000,[switch]$EnableExternalOcr)
  $ext=[IO.Path]::GetExtension($Path).ToLowerInvariant()
  if($ext -eq '.pdf'){return Get-BowerbirdPdfText -Path $Path -MaxCharacters $MaxCharacters}
  if($EnableExternalOcr -and @('.png','.jpg','.jpeg','.bmp','.tif','.tiff') -contains $ext){
-  $ocr=Get-Command 'tesseract.exe' -ErrorAction SilentlyContinue
-  if($ocr){
-   $info=New-Object Diagnostics.ProcessStartInfo
-   $info.FileName=$ocr.Source;$info.Arguments=('"'+$Path.Replace('"','')+'" stdout')
-   $info.UseShellExecute=$false;$info.RedirectStandardOutput=$true;$info.RedirectStandardError=$true;$info.CreateNoWindow=$true
-   $process=[Diagnostics.Process]::Start($info)
-   try{
-    $result=$process.StandardOutput.ReadToEnd()
-    if(-not $process.WaitForExit(15000)){try{$process.Kill()}catch{};throw 'OCR process timed out'}
-    return $result.Substring(0,[Math]::Min($MaxCharacters,$result.Length))
-   }finally{$process.Dispose()}
-  }
+  if(Get-BowerbirdOcrCommand){return (Invoke-BowerbirdOcr -Path $Path -MaxCharacters $MaxCharacters)}
  }
  return Get-BowerbirdText -Path $Path -MaxCharacters $MaxCharacters
 }
@@ -118,7 +191,7 @@ function New-BowerbirdSmartIndex {
   }
   if($unsafe){continue}
   $null=$seen.Add($file.FullName)
-  $reuse=Get-BowerbirdReusableEntry -Lookup $lookup -File $file -NeedContent ([bool]$IncludeContent) -NeedOcr ([bool]$EnableExternalOcr) -PreviousContent $previousContent -PreviousOcr $previousOcr
+  $reuse=Get-BowerbirdReusableEntry -Lookup $lookup -File $file -NeedContent ([bool]$IncludeContent) -NeedOcr ([bool]$EnableExternalOcr -and @('.png','.jpg','.jpeg','.bmp','.tif','.tiff') -contains $file.Extension.ToLowerInvariant()) -PreviousContent $previousContent -PreviousOcr $previousOcr
   if($reuse){
    $stats.Unchanged++
    $files.Add([pscustomobject]@{

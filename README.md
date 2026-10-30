@@ -139,8 +139,8 @@ If the GUI will not launch at all, run `Start-Bowerbird.bat diagnostics`. See [D
 
 ### Important implementation distinctions
 
-- **PDF**: Browsing works through the browser's native PDF viewer. Local PDF text extraction is best-effort for uncompressed and FlateDecode text streams; this is **not** a full PDF parser.
-- **OCR**: If an approved `tesseract.exe` is already available on PATH, enable OCR when indexing. Nothing is auto-installed.
+- **PDF**: Browsing works through the browser's native PDF viewer. Local PDF text extraction reads text-showing operators (`Tj`, `'`, `"`, `TJ` arrays with kerning, single-byte hex strings, escapes and octal codes) from uncompressed and FlateDecode content streams, up to 20 MB per file. It is **not** a full PDF parser: no encrypted PDFs (they yield no text), no object streams, no CID / Identity-H fonts (text in those fonts is missed) and no scanned pages (use OCR). Tested on synthetic PDFs built in `Tests\PdfOcr.ps1`, not on a corpus of real documents.
+- **OCR**: If an approved `tesseract.exe` is already available on PATH (or `BOWERBIRD_OCR_PATH` names a program, `.exe`, `.cmd` or `.bat`), enable OCR when indexing images. Nothing is auto-installed. The program is stopped after 15 seconds and a failure is recorded on that file only. Tested with a stand-in program; a real tesseract run on real scans is not verified here.
 - **AI vision**: The legacy CLI now requires `-AllowVision` and Studio requires both `-AllowCloudAI` and a separate explicit vision consent. No images are uploaded by ordinary indexing or local rename preview.
 - **Streaming**: The SSE bridge supports compatible providers; endpoints which decline streaming may return a complete JSON response. Model authentication still needs working approved credentials / Lazarette integration.
 - **Index encryption**: DPAPI ties the saved index to the Windows user and PC that wrote it. Another user or PC cannot read it and has to rebuild. `BOWERBIRD_INDEX_ENCRYPTION=off` keeps plaintext JSON (for example to inspect it by hand). This protects the file at rest; the running Studio still holds the index in memory, and search results show text snippets.
