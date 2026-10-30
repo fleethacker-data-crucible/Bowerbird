@@ -1,5 +1,6 @@
 #requires -Version 5.1
 # Local-first indexing, OpenXML extraction, duplicate detection and lexical retrieval.
+. (Join-Path $PSScriptRoot 'BowerbirdIndexStore.ps1')
 function Get-BowerbirdText {
  [CmdletBinding()] param([Parameter(Mandatory)][string]$Path,[int]$MaxCharacters=120000)
  $ext=[IO.Path]::GetExtension($Path).ToLowerInvariant()
@@ -70,7 +71,7 @@ function New-BowerbirdIndex {
   $items.Add([pscustomobject]@{Path=$file.FullName;Name=$file.Name;Extension=$file.Extension;Size=$file.Length;ModifiedUtc=$file.LastWriteTimeUtc.ToString('o');SHA256=$sha;VisualHash=$visual;Text=$text;Error=$errorText})
  }
  $result=[pscustomobject]@{SchemaVersion=1;Root=$folder;IndexedUtc=[DateTime]::UtcNow.ToString('o');Files=@($items.ToArray())}
- if($OutputPath){$parent=Split-Path -Parent $OutputPath;if($parent -and -not (Test-Path $parent)){New-Item -ItemType Directory -Path $parent -Force|Out-Null};$tmp="$OutputPath.tmp";[IO.File]::WriteAllText($tmp,($result|ConvertTo-Json -Depth 6), (New-Object Text.UTF8Encoding $false));Move-Item -LiteralPath $tmp -Destination $OutputPath -Force}
+ if($OutputPath){$parent=Split-Path -Parent $OutputPath;if($parent -and -not (Test-Path $parent)){New-Item -ItemType Directory -Path $parent -Force|Out-Null};$null=Save-BowerbirdIndexFile -Path $OutputPath -Index $result}
  return $result
 }
 function Find-BowerbirdDuplicates {

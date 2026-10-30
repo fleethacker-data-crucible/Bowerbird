@@ -38,7 +38,7 @@ function Relative-Path([string]$Full){
 }
 function Read-Index{
  if(-not (Test-Path -LiteralPath $script:IndexPath)){throw 'Build an index first'}
- return (Get-Content -LiteralPath $script:IndexPath -Raw|ConvertFrom-Json)
+ return (Read-BowerbirdIndexFile -Path $script:IndexPath)
 }
 function Save-JsonFile([string]$Path,$Object){
  $tmp=$Path+'.tmp'
@@ -88,7 +88,7 @@ function Invoke-Api([string]$Route,$Body){
    Write-BowerbirdDiagnostic -Event ('UI_'+$event) -Message $target
    return @{ok=$true}
   }
-  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;port=$Port;transport=(Get-BowerbirdTransportName);indexExists=(Test-Path $script:IndexPath);cloudAI=[bool]$AllowCloudAI;version='2.3';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional','rename','workspace-switch','workspace-picker','diagnostics','feedback','session-recording','lifecycle')}}
+  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;port=$Port;transport=(Get-BowerbirdTransportName);indexExists=(Test-Path $script:IndexPath);indexEncrypted=(Test-BowerbirdIndexEncrypted -Path $script:IndexPath);cloudAI=[bool]$AllowCloudAI;version='2.3';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional','incremental-index','encrypted-index','rename','workspace-switch','workspace-picker','diagnostics','feedback','session-recording','lifecycle')}}
   '/api/workspace/select' {
    return Set-BowerbirdWorkspace -Folder ([string]$Body.path)
   }
@@ -101,9 +101,13 @@ function Invoke-Api([string]$Route,$Body){
   '/api/preview' {return Safe-Preview ([string]$Body.path)}
   '/api/index' {
    $sub=Resolve-WorkspacePath ([string]$Body.path)
-   $index=New-BowerbirdSmartIndex -Path $sub -Recurse:([bool]$Body.recurse) -IncludeContent:([bool]$Body.includeContent) -EnableExternalOcr:([bool]$Body.ocr)
-   Save-JsonFile $script:IndexPath $index
-   return @{indexed=$index.Files.Count;at=$index.IndexedUtc;root=$index.Root;content=$index.IncludesContent}
+   # Unchanged files (same path, size and modified time) keep their saved hash and text unless full=true.
+   $previous=$null
+   if(-not [bool]$Body.full -and (Test-Path -LiteralPath $script:IndexPath -PathType Leaf)){try{$previous=Read-BowerbirdIndexFile -Path $script:IndexPath}catch{Write-Verbose $_.Exception.Message}}
+   $index=New-BowerbirdSmartIndex -Path $sub -Recurse:([bool]$Body.recurse) -IncludeContent:([bool]$Body.includeContent) -EnableExternalOcr:([bool]$Body.ocr) -Previous $previous
+   $saved=Save-BowerbirdIndexFile -Path $script:IndexPath -Index $index
+   return @{indexed=$index.Files.Count;at=$index.IndexedUtc;root=$index.Root;content=$index.IncludesContent;incremental=$index.Incremental
+    added=$index.Stats.Added;changed=$index.Stats.Changed;unchanged=$index.Stats.Unchanged;removed=$index.Stats.Removed;encrypted=$saved.Encrypted}
   }
   '/api/search' { $hits=@(Search-BowerbirdIndex -Index (Read-Index) -Query ([string]$Body.query) -Top 100);return @{items=@($hits|ForEach-Object {@{path=(Relative-Path $_.Path);name=$_.Name;score=$_.Score;snippet=$_.Snippet}})}}
   '/api/insights' {return Get-BowerbirdInsights -Index (Read-Index)}
