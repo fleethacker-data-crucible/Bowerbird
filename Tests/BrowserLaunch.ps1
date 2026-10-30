@@ -41,35 +41,15 @@ try{
   )|Where-Object {$_ -and (Test-Path -LiteralPath $_ -PathType Leaf)}
   $edgeBinary=@($edgePaths|Select-Object -First 1)
   if($edgeBinary.Count){
-   $dump=Join-Path $temp 'edge-dom.txt'
-   $edgeErr=Join-Path $temp 'edge-errors.txt'
-   $profile=Join-Path $temp 'edge-profile'
-   $flags=@('--headless=new','--disable-gpu','--disable-extensions','--disable-background-networking','--no-first-run','--no-default-browser-check','--virtual-time-budget=6500',('--user-data-dir="'+$profile+'"'),'--dump-dom',('"'+$session+'"'))
-   $edge=Start-Process -FilePath $edgeBinary[0] -ArgumentList $flags -RedirectStandardOutput $dump -RedirectStandardError $edgeErr -PassThru
-   for($n=0;$n -lt 100 -and -not $edge.HasExited;$n++){Start-Sleep -Milliseconds 250}
-   if(-not $edge.HasExited){try{Stop-Process -Id $edge.Id -Force}catch{};throw 'Edge headless DOM rendering timed out'}
-   $html=if(Test-Path -LiteralPath $dump){[string](Get-Content -LiteralPath $dump -Raw)}else{''}
-   if([string]::IsNullOrWhiteSpace($html)){throw 'Edge produced an empty DOM; nothing to check'}
-   if($html -notmatch 'id="connection">Running<' -or $html -notmatch 'BowerbirdGuiProbe\.txt'){
-    foreach($name in @('notice','file-table','connection')){
-     $at=$html.IndexOf('id="'+$name+'"')
-     if($at -ge 0){Write-Host ("DOM "+$name+": "+$html.Substring([Math]::Max(0,$at-110),[Math]::Min(550,$html.Length-[Math]::Max(0,$at-110))))}
-    }
-    $diagnostic=Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'Bowerbird\Logs'
-    $latest=Get-ChildItem -LiteralPath $diagnostic -Filter 'studio-*.jsonl' -ErrorAction SilentlyContinue|Sort-Object LastWriteTime -Descending|Select-Object -First 1
-    if($latest){Write-Host 'Recent local request events:';Get-Content -LiteralPath $latest.FullName -Tail 14|ForEach-Object {Write-Host $_}}
-    if(Test-Path $edgeErr){Write-Host ((Get-Content $edgeErr -Tail 8) -join [Environment]::NewLine)}
-   }
-   Assert ([bool]($html -match 'id="connection">Running<')) 'Browser JavaScript never set the status bar engine state to Running'
-   Assert ([bool]($html -match 'BowerbirdGuiProbe\.txt')) 'Browser JavaScript never populated the file explorer'
-   Write-Host 'PASS: Edge executed GUI JavaScript and rendered file explorer' -ForegroundColor Green
-   if(Get-Command node -ErrorAction SilentlyContinue){
-    $alternate=Join-Path $temp 'AlternateForGui'
-    [IO.Directory]::CreateDirectory($alternate)|Out-Null
-    [IO.File]::WriteAllText((Join-Path $alternate 'BrowserSelected.txt'),'Selected from the actual GUI')
-    & node (Join-Path $repo 'Tests\GuiFolderSwitch.js') $session $alternate $edgeBinary[0]
-    if($LASTEXITCODE -ne 0){throw 'Real Edge GUI folder selector test failed'}
-   }else{Write-Host 'SKIP: Node is unavailable on CI; browser-only folder selector test omitted'}
+   # The CDP harness waits for Running and BowerbirdGuiProbe.txt in the live DOM
+   # before exercising folder switching and diagnostics. Edge --dump-dom can exit
+   # successfully with empty stdout on the runner; do not use that as a render gate.
+   Assert ([bool](Get-Command node -ErrorAction SilentlyContinue)) 'Node is required for the real Edge GUI test'
+   $alternate=Join-Path $temp 'AlternateForGui'
+   [IO.Directory]::CreateDirectory($alternate)|Out-Null
+   [IO.File]::WriteAllText((Join-Path $alternate 'BrowserSelected.txt'),'Selected from the actual GUI')
+   & node (Join-Path $repo 'Tests\GuiFolderSwitch.js') $session $alternate $edgeBinary[0]
+   if($LASTEXITCODE -ne 0){throw 'Real Edge GUI rendering and folder selector test failed'}
 
   }else{Write-Host 'SKIP: Edge not present; launcher + HTTP integration checks passed' -ForegroundColor Yellow}
  }
