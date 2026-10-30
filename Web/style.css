@@ -67,6 +67,8 @@ svg.icon{flex:none}
 .top-actions,.formline,.toolbar,.breadcrumb{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .top-actions{flex-wrap:nowrap}
 .content{overflow:auto;padding:24px;min-width:0}
+.view{display:none}
+.view.active{display:block}
 .content>*{max-width:1600px;margin-left:auto;margin-right:auto}
 
 /* ---------- status bar (28 px): engine · address · workspace · version ---------- */
