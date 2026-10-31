@@ -1,0 +1,13 @@
+data: {"id":"chatcmpl-fixture-2","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-fixture-2","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"Move "},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-fixture-2","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"the screenshots "},"finish_reason":null}]}
+
+: keep-alive comment lines are ignored
+
+data: not-json-is-skipped
+
+data: {"id":"chatcmpl-fixture-2","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"into one folder."},"finish_reason":"stop"}]}
+
+data: [DONE]

@@ -58,7 +58,7 @@ Notes:
 
 ## Intelligence router
 
-Direction (2026-10-26): Fleet tools stop hard-coding external endpoints and default to the Fleet intelligence router, [Fairlead](https://github.com/fleethacker-data-crucible/Fairlead), for AI/LLM endpoints, git repository access and database connections. Fairlead will own endpoint selection, credentials (through Lazarette / Windows Credential Manager, never in tool config), policy and routing. Until Bowerbird is moved behind it, the current settings in the table below stay as they are; nothing has changed in code yet.
+Direction (2026-10-26): Fleet tools stop hard-coding external endpoints and default to the Fleet intelligence router, [Fairlead](https://github.com/fleethacker-data-crucible/Fairlead), for AI/LLM endpoints, git repository access and database connections. Fairlead will own endpoint selection, credentials (through Lazarette / Windows Credential Manager, never in tool config), policy and routing. Bowerbird has an opt-in Fairlead profile (off by default, 2026-10-30): set `BOWERBIRD_FAIRLEAD_URL` and `BOWERBIRD_USE_FAIRLEAD=1` and AI chat, streaming and the vision rename pass go through the router, which holds the credentials (no vault item is read). Without that, the settings in the table below apply unchanged. The router's API is assumed to be OpenAI-compatible chat completions; it has not been tested against a running Fairlead.
 
 | Access | Today | Where | Settings |
 | --- | --- | --- | --- |
