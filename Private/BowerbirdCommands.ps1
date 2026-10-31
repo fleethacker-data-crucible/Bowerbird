@@ -31,6 +31,8 @@ function Get-BowerbirdCommandRegistry {
   @{name='bowerbird code stats';route='/api/code';summary='Line counts by language';inputs=@($path,$recurse)}
   @{name='bowerbird rename preview';route='/api/rename-preview';summary='Preview smart renames and save them as the move plan'
    inputs=@($path,$recurse,(New-BowerbirdInput 'use-vision' 'useVision' 'bool' $false 'Send images to the vision model (needs --allow-cloud-ai)'),(New-BowerbirdInput 'consent' 'consent' 'string' $false 'VISION_UPLOAD to allow image upload'),(New-BowerbirdInput 'max-vision' 'maxVision' 'int' $false 'Vision requests, 0-25'))}
+  @{name='bowerbird sidecar preview';route='/api/sidecar-preview';summary='Preview renames from SnapShackle OCR sidecars and save them as the move plan'
+   inputs=@($path,$recurse)}
   @{name='bowerbird plan create';route='/api/plan';summary='Preview moves from rules and save them as the move plan';needs='index'
    inputs=@((New-BowerbirdInput 'rules' 'rules' 'json' $true 'JSON array of rules'),(New-BowerbirdInput 'destination' 'destination' 'string' $false 'Workspace-relative destination folder'))}
   @{name='bowerbird plan apply';route='/api/apply';summary='Move the files in the saved plan';destructive=$true;needs='plan';confirm='APPLY'

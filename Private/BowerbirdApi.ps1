@@ -88,7 +88,7 @@ function Invoke-Api([string]$Route,$Body){
    Write-BowerbirdDiagnostic -Event ('UI_'+$event) -Message $target
    return @{ok=$true}
   }
-  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;port=$Port;transport=(Get-BowerbirdTransportName);indexExists=(Test-Path $script:IndexPath);cloudAI=[bool]$AllowCloudAI;version='2.3';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional','rename','workspace-switch','workspace-picker','diagnostics','feedback','session-recording','lifecycle')}}
+  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;port=$Port;transport=(Get-BowerbirdTransportName);indexExists=(Test-Path $script:IndexPath);cloudAI=[bool]$AllowCloudAI;version='2.3';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional','rename','sidecar-rename','workspace-switch','workspace-picker','diagnostics','feedback','session-recording','lifecycle')}}
   '/api/workspace/select' {
    return Set-BowerbirdWorkspace -Folder ([string]$Body.path)
   }
@@ -154,6 +154,16 @@ function Invoke-Api([string]$Route,$Body){
    Save-JsonFile $script:PlanPath $plan
    return @{id=$plan.Id;count=@($plan.Operations).Count;vision=$plan.VisionRequests
     operations=@($plan.Operations|ForEach-Object {@{source=(Relative-Path $_.Source);destination=(Relative-Path $_.Destination);reason=$_.Reason;confidence=$_.Confidence}})
+    skipped=@($plan.Skipped|ForEach-Object {@{source=(Relative-Path $_.Source);reason=$_.Reason}})}
+  }
+  '/api/sidecar-preview' {
+   # Propose-only: renames from SnapShackle OCR sidecars. Apply goes through /api/apply and the journal.
+   $folder=Resolve-WorkspacePath ([string]$Body.path)
+   $plan=New-BowerbirdSidecarRenamePlan -Folder $folder -Recurse:([bool]$Body.recurse)
+   foreach($op in $plan.Operations){Assert-WorkspaceAbsolute $op.Source;Assert-WorkspaceAbsolute $op.Destination}
+   Save-JsonFile $script:PlanPath $plan
+   return @{id=$plan.Id;count=@($plan.Operations).Count;captures=@($plan.Operations|Where-Object {$_.Kind -eq 'Capture'}).Count
+    operations=@($plan.Operations|ForEach-Object {@{source=(Relative-Path $_.Source);destination=(Relative-Path $_.Destination);reason=$_.Reason;kind=$_.Kind}})
     skipped=@($plan.Skipped|ForEach-Object {@{source=(Relative-Path $_.Source);reason=$_.Reason}})}
   }
   '/api/plan' {

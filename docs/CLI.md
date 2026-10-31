@@ -81,6 +81,7 @@ output as the `ok:false` object. Otherwise they go to standard error.
 | `bowerbird agents run` | `/api/agents` | `--agent` (required: triage, cleanup, audit) | needs index; read-only |
 | `bowerbird code stats` | `/api/code` | `--path`, `--recurse` | |
 | `bowerbird rename preview` | `/api/rename-preview` | `--path`, `--recurse`, `--use-vision`, `--consent`, `--max-vision` | saves the move plan; vision needs `--allow-cloud-ai` and `--consent VISION_UPLOAD` |
+| `bowerbird sidecar preview` | `/api/sidecar-preview` | `--path`, `--recurse` | saves the move plan (a capture and its sidecar are two operations); apply and undo are `plan apply` and `plan undo` |
 | `bowerbird plan create` | `/api/plan` | `--rules` (required, JSON), `--destination` | needs index; saves the move plan |
 | `bowerbird plan apply` | `/api/apply` | `--id` (required) | destructive; needs plan; the id must match the saved plan |
 | `bowerbird plan undo` | `/api/undo` | | destructive; needs journal |
@@ -111,6 +112,30 @@ The request loop handles four browser routes itself, so they have no command:
 
 `rules.json`: `[{"Name":"Text","Extension":[".txt"],"Folder":"Text"}]`
 
+## Example: rename SnapShackle captures from their OCR text
+
+SnapShackle saves each capture as `NAME.png` plus a sidecar `NAME.png.meta.json` that holds the text its OCR found
+(the contract is SnapShackle's `docs/CAPTURE-FORMAT.md`, schema `snapshackle.capture/1`). Bowerbird can rename the
+pair from that text. It only proposes; you apply it through the same plan and journal as every other move.
+
+    Start-Bowerbird-Console.bat sidecar preview --root "%LOCALAPPDATA%\SnapShackle\Captures" --json
+    Start-Bowerbird-Console.bat plan apply --root "%LOCALAPPDATA%\SnapShackle\Captures" --id <id from sidecar preview> --yes
+    Start-Bowerbird-Console.bat plan undo --root "%LOCALAPPDATA%\SnapShackle\Captures" --yes
+
+Rules:
+
+- Only automatic names are renamed: `<SnapShackle|CutterMk|Lasso|SnipHero>-<yyyyMMdd>-<HHmmss>-<fff>-<8 hex>.png`.
+  A name a person chose, or one this command already wrote, is left alone.
+- The new name is `SnapShackle-<words>-<yyyyMMdd>-<HHmmss>-<fff>-<8 hex>.png`, so the capture stays listed in
+  SnapShackle and keeps its sort order. `<words>` is at most six lowercase words (48 characters) from the first
+  title-like line of the OCR text.
+- The PNG and its sidecar are two operations in one plan, PNG first. The sidecar is moved, never edited, and
+  nothing is deleted. A taken target name is skipped, never overwritten.
+- OCR text can hold secrets. A line that mentions a password, token, key or similar, an e-mail address, a path, a
+  URL, a long number or an id-like word never becomes part of a name. If no line is usable the capture is skipped
+  and the reason is in `skipped`.
+- A capture with no sidecar, an empty OCR field or an unknown schema major is skipped with a reason.
+
 ## The running server
 
 While Studio is running, `GET /api/commands` returns the same `bowerbird.commands/1` list. It has the same checks as
@@ -118,6 +143,9 @@ every other `/api` route: the session token must be in `X-Bowerbird-Token`, and 
 `http://127.0.0.1:<port>`. The other routes stay `POST` only.
 
 ## Tests
+
+`Tests\SidecarRename.ps1` runs in CI. It builds synthetic captures and sidecars in a temporary folder and checks the
+slug rules, the plan, apply and undo through the journal, and the same flow through the CLI.
 
 `Tests\CliParity.ps1` runs in CI. It checks that:
 
