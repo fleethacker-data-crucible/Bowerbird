@@ -54,7 +54,7 @@ function resetForWorkspaceSwitch(){
   'search-results':'Build an index, then search this folder.',
   'duplicate-results':'No duplicate scan for this folder yet.',
   'plan-results':'No proposed moves. Generate a plan for the selected folder.',
-  'rename-results':'No rename proposals for this folder yet.',
+  'rename-results':'No rename proposals for this folder yet.','export-results':'Nothing exported yet.',
   'related-results':'','code-results':'Run an analysis for this folder.',
   'agent-results':'Run an agent after indexing this folder.',
   'category-results':'Build an index to view folder insights.'
@@ -174,18 +174,33 @@ $('rename-plan').addEventListener('click',async()=>{
  const maxVision=Math.max(0,Math.min(25,Number($('rename-limit').value)||0));
  const data=await run(()=>api('rename-preview',{path:state.path,recurse:$('rename-recurse').checked,useVision,maxVision,consent:useVision?'VISION_UPLOAD':''}),'Rename proposals ready');
  if(!data)return;
+ showRenamePlan(data,data.count+' rename proposals · '+data.vision+' vision calls','No eligible files found, or filenames are already appropriate.')
+});
+function showRenamePlan(data,title,emptyText){
  state.renamePlan=data;state.plan=null;$('apply').disabled=true;$('rename-apply').disabled=!data.count;
  const target=$('rename-results');clear(target);
- target.append(el('h3','',data.count+' rename proposals · '+data.vision+' vision calls'));
+ target.append(el('h3','',title));
  for(const item of data.operations){
-  addResult(target,item.source,'→ '+item.destination,'Confidence '+Math.round((item.confidence||0)*100)+'% · '+item.reason)
+  addResult(target,item.source,'→ '+item.destination,item.confidence===undefined?item.reason:'Confidence '+Math.round((item.confidence||0)*100)+'% · '+item.reason)
  }
  if(data.skipped&&data.skipped.length){
   target.append(el('h3','',data.skipped.length+' skipped'));
   for(const item of data.skipped)addResult(target,item.source,'Skipped',item.reason)
  }
- if(!data.count)target.append(el('p','muted','No eligible files found, or filenames are already appropriate.'))
+ if(!data.count)target.append(el('p','muted',emptyText))
+}
+$('rename-sidecar').addEventListener('click',async()=>{
+ const data=await run(()=>api('sidecar-preview',{path:state.path,recurse:$('rename-recurse').checked}),'Names proposed from SnapShackle text. Review every one.');
+ if(!data)return;
+ showRenamePlan(data,data.captures+' captures to rename ('+data.count+' files: each PNG with its sidecar)','No SnapShackle captures with usable text were found in this folder. Open the SnapShackle Captures folder first.')
 });
+async function exportForSemaphore(kind){
+ const data=await run(()=>api('export',{kind,save:true}),'Export written');if(!data)return;
+ const target=$('export-results');clear(target);
+ addResult(target,data.count+' '+(kind==='index'?'files':'moves')+' exported',data.savedTo,'In Semaphore: Data, Add data, then choose this file. It is replaced the next time you export the same kind.')
+}
+$('export-index').addEventListener('click',()=>exportForSemaphore('index'));
+$('export-history').addEventListener('click',()=>exportForSemaphore('history'));
 $('rename-vision').addEventListener('change',()=>{state.renamePlan=null;$('rename-apply').disabled=true});
 $('rename-limit').addEventListener('change',()=>{state.renamePlan=null;$('rename-apply').disabled=true});
 $('rename-apply').addEventListener('click',async()=>{
