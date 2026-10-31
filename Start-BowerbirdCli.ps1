@@ -140,7 +140,7 @@ try{
    [IO.File]::AppendAllText($script:LogFile,$line+[Environment]::NewLine,[Text.Encoding]::UTF8)
   }catch{}
  }
- foreach($module in @('BowerbirdIntelligence','BowerbirdAdvanced','BowerbirdStreaming','Get-ImageMetadata','BowerbirdPass1','BowerbirdPass2','BowerbirdNamer','BowerbirdRenameStudio','BowerbirdActions','BowerbirdLlm','LazaretteBridge','BowerbirdWorkspace','BowerbirdSupport','BowerbirdApi')){
+ foreach($module in @('BowerbirdIntelligence','BowerbirdAdvanced','BowerbirdStreaming','Get-ImageMetadata','BowerbirdPass1','BowerbirdPass2','BowerbirdNamer','BowerbirdRenameStudio','BowerbirdSidecarRename','BowerbirdSemaphoreExport','BowerbirdActions','BowerbirdLlm','LazaretteBridge','BowerbirdWorkspace','BowerbirdSupport','BowerbirdApi')){
   . (Join-Path $AppRoot ('Private\'+$module+'.ps1'))
  }
  if([string]::IsNullOrWhiteSpace($root)){

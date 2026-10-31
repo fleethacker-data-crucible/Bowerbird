@@ -88,7 +88,7 @@ function Invoke-Api([string]$Route,$Body){
    Write-BowerbirdDiagnostic -Event ('UI_'+$event) -Message $target
    return @{ok=$true}
   }
-  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;port=$Port;transport=(Get-BowerbirdTransportName);indexExists=(Test-Path $script:IndexPath);indexEncrypted=(Test-BowerbirdIndexEncrypted -Path $script:IndexPath);cloudAI=[bool]$AllowCloudAI;version='2.3';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional','incremental-index','encrypted-index','rename','workspace-switch','workspace-picker','diagnostics','feedback','session-recording','lifecycle')}}
+  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;port=$Port;transport=(Get-BowerbirdTransportName);indexExists=(Test-Path $script:IndexPath);indexEncrypted=(Test-BowerbirdIndexEncrypted -Path $script:IndexPath);cloudAI=[bool]$AllowCloudAI;version='2.3';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional','incremental-index','encrypted-index','rename','sidecar-rename','semaphore-export','workspace-switch','workspace-picker','diagnostics','feedback','session-recording','lifecycle')}}
   '/api/workspace/select' {
    return Set-BowerbirdWorkspace -Folder ([string]$Body.path)
   }
@@ -159,6 +159,26 @@ function Invoke-Api([string]$Route,$Body){
    return @{id=$plan.Id;count=@($plan.Operations).Count;vision=$plan.VisionRequests
     operations=@($plan.Operations|ForEach-Object {@{source=(Relative-Path $_.Source);destination=(Relative-Path $_.Destination);reason=$_.Reason;confidence=$_.Confidence}})
     skipped=@($plan.Skipped|ForEach-Object {@{source=(Relative-Path $_.Source);reason=$_.Reason}})}
+  }
+  '/api/sidecar-preview' {
+   # Propose-only: renames from SnapShackle OCR sidecars. Apply goes through /api/apply and the journal.
+   $folder=Resolve-WorkspacePath ([string]$Body.path)
+   $plan=New-BowerbirdSidecarRenamePlan -Folder $folder -Recurse:([bool]$Body.recurse)
+   foreach($op in $plan.Operations){Assert-WorkspaceAbsolute $op.Source;Assert-WorkspaceAbsolute $op.Destination}
+   Save-JsonFile $script:PlanPath $plan
+   return @{id=$plan.Id;count=@($plan.Operations).Count;captures=@($plan.Operations|Where-Object {$_.Kind -eq 'Capture'}).Count
+    operations=@($plan.Operations|ForEach-Object {@{source=(Relative-Path $_.Source);destination=(Relative-Path $_.Destination);reason=$_.Reason;kind=$_.Kind}})
+    skipped=@($plan.Skipped|ForEach-Object {@{source=(Relative-Path $_.Source);reason=$_.Reason}})}
+  }
+  '/api/export' {
+   # Read-only. save writes the Semaphore file into this workspace's state folder (exports), never into the workspace.
+   $export=New-BowerbirdSemaphoreExport -Kind ([string]$Body.kind) -IndexPath $script:IndexPath -JournalPath $script:JournalPath
+   if(-not [bool]$Body.save){return $export}
+   $dir=Join-Path $script:WorkspaceDataDir 'exports'
+   [IO.Directory]::CreateDirectory($dir)|Out-Null
+   $file=Join-Path $dir ('bowerbird-'+$export.kind+'.json')
+   Save-JsonFile $file $export
+   return @{schema=$export.schema;kind=$export.kind;count=$export.count;exportedAt=$export.exportedAt;savedTo=$file}
   }
   '/api/plan' {
    $rules=@($Body.rules)

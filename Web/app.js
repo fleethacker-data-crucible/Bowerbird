@@ -28,7 +28,16 @@ async function api(route,body={}){
  if(!response.ok){if(route!=='client-event')record('API_ERROR',route);throw Error((data.error||'Request failed')+(data.requestId?' [Request '+data.requestId+']':''))}
  return data
 }
-async function run(action,done){try{notify('Working…');const result=await action();notify(done||'Done');return result}catch(err){notify(err.message,true);return null}}
+const spoken=window.BowerbirdVoice?window.BowerbirdVoice.create({synth:window.speechSynthesis,Utterance:window.SpeechSynthesisUtterance,lang:document.documentElement.lang||navigator.language||'en-US',isEnabled:()=>!!$('voice-toggle')&&$('voice-toggle').checked,onStatus:t=>{$('voice-status').textContent=t}}):null;
+async function run(action,done){const job=spoken?spoken.begin():null;try{notify('Working…');const result=await action();notify(done||'Done');if(job)job.end(true,done||'Done');return result}catch(err){notify(err.message,true);if(job)job.end(false);return null}}
+function initSpokenProgress(){
+ const box=$('voice-toggle');if(!spoken){$('voice-status').textContent='Spoken progress is unavailable. Progress stays on screen.';box.disabled=true;return}
+ let saved=false;try{saved=localStorage.getItem('bowerbird-voice')==='on'}catch(_){/* Storage may be disabled; the switch just starts off. */}
+ box.checked=saved;spoken.refreshStatus();
+ if(window.speechSynthesis&&window.speechSynthesis.addEventListener)window.speechSynthesis.addEventListener('voiceschanged',()=>spoken.refreshStatus());
+ box.addEventListener('change',()=>{try{localStorage.setItem('bowerbird-voice',box.checked?'on':'off')}catch(_){/* Not remembered; still works for this page. */}if(box.checked)spoken.announceEnabled();else{spoken.stop();spoken.refreshStatus()}});
+}
+initSpokenProgress();
 function size(bytes){if(bytes===null||bytes===undefined)return '—';if(bytes<1024)return bytes+' B';if(bytes<1048576)return (bytes/1024).toFixed(1)+' KB';return (bytes/1048576).toFixed(1)+' MB'}
 function show(view){document.querySelectorAll('.nav').forEach(b=>{const on=b.dataset.view===view;b.classList.toggle('active',on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.id==='view-'+view));$('page-title').textContent=({files:'File Explorer',search:'Intelligent Search',insights:'Insights & Agents',duplicates:'Duplicate Detection',organize:'File Organization',rename:'Smart Rename',code:'Code Insights',assistant:'AI Assistant',diagnostics:'Diagnostics & Feedback'})[view];if(window.BowerbirdDiagnostics)window.BowerbirdDiagnostics.page(view);if(view==='diagnostics')return window.BowerbirdDiagnostics?.activate();if(view==='files')return loadFiles();if(view==='insights')return loadInsights()}
 document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
@@ -45,7 +54,7 @@ function resetForWorkspaceSwitch(){
   'search-results':'Build an index, then search this folder.',
   'duplicate-results':'No duplicate scan for this folder yet.',
   'plan-results':'No proposed moves. Generate a plan for the selected folder.',
-  'rename-results':'No rename proposals for this folder yet.',
+  'rename-results':'No rename proposals for this folder yet.','export-results':'Nothing exported yet.',
   'related-results':'','code-results':'Run an analysis for this folder.',
   'agent-results':'Run an agent after indexing this folder.',
   'category-results':'Build an index to view folder insights.'
@@ -165,18 +174,33 @@ $('rename-plan').addEventListener('click',async()=>{
  const maxVision=Math.max(0,Math.min(25,Number($('rename-limit').value)||0));
  const data=await run(()=>api('rename-preview',{path:state.path,recurse:$('rename-recurse').checked,useVision,maxVision,consent:useVision?'VISION_UPLOAD':''}),'Rename proposals ready');
  if(!data)return;
+ showRenamePlan(data,data.count+' rename proposals · '+data.vision+' vision calls','No eligible files found, or filenames are already appropriate.')
+});
+function showRenamePlan(data,title,emptyText){
  state.renamePlan=data;state.plan=null;$('apply').disabled=true;$('rename-apply').disabled=!data.count;
  const target=$('rename-results');clear(target);
- target.append(el('h3','',data.count+' rename proposals · '+data.vision+' vision calls'));
+ target.append(el('h3','',title));
  for(const item of data.operations){
-  addResult(target,item.source,'→ '+item.destination,'Confidence '+Math.round((item.confidence||0)*100)+'% · '+item.reason)
+  addResult(target,item.source,'→ '+item.destination,item.confidence===undefined?item.reason:'Confidence '+Math.round((item.confidence||0)*100)+'% · '+item.reason)
  }
  if(data.skipped&&data.skipped.length){
   target.append(el('h3','',data.skipped.length+' skipped'));
   for(const item of data.skipped)addResult(target,item.source,'Skipped',item.reason)
  }
- if(!data.count)target.append(el('p','muted','No eligible files found, or filenames are already appropriate.'))
+ if(!data.count)target.append(el('p','muted',emptyText))
+}
+$('rename-sidecar').addEventListener('click',async()=>{
+ const data=await run(()=>api('sidecar-preview',{path:state.path,recurse:$('rename-recurse').checked}),'Names proposed from SnapShackle text. Review every one.');
+ if(!data)return;
+ showRenamePlan(data,data.captures+' captures to rename ('+data.count+' files: each PNG with its sidecar)','No SnapShackle captures with usable text were found in this folder. Open the SnapShackle Captures folder first.')
 });
+async function exportForSemaphore(kind){
+ const data=await run(()=>api('export',{kind,save:true}),'Export written');if(!data)return;
+ const target=$('export-results');clear(target);
+ addResult(target,data.count+' '+(kind==='index'?'files':'moves')+' exported',data.savedTo,'In Semaphore: Data, Add data, then choose this file. It is replaced the next time you export the same kind.')
+}
+$('export-index').addEventListener('click',()=>exportForSemaphore('index'));
+$('export-history').addEventListener('click',()=>exportForSemaphore('history'));
 $('rename-vision').addEventListener('change',()=>{state.renamePlan=null;$('rename-apply').disabled=true});
 $('rename-limit').addEventListener('change',()=>{state.renamePlan=null;$('rename-apply').disabled=true});
 $('rename-apply').addEventListener('click',async()=>{

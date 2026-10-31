@@ -39,6 +39,10 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             node --check Web/lifecycle.js
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            node --check Web/voice.js
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            node Tests/Voice.js
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             node Tests/UiContract.js
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
@@ -54,6 +58,12 @@ jobs:
       - name: Lifecycle presence rule and runtime files
         shell: powershell
         run: .\Tests\Lifecycle.ps1
+      - name: Rename from SnapShackle OCR sidecars
+        shell: powershell
+        run: .\Tests\SidecarRename.ps1
+      - name: Semaphore data source export
+        shell: powershell
+        run: .\Tests\SemaphoreExport.ps1
       - name: Data folder override and demo walkthrough
         shell: powershell
         run: .\Tests\DataDir.ps1

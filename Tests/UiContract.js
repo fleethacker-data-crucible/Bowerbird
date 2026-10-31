@@ -17,6 +17,17 @@ for(const id of required)assert(known.has(id),'Missing HTML id: '+id);
 for(const [,view] of html.matchAll(/data-view="([^"]+)"/g))assert(known.has('view-'+view),'Navigation target missing: '+view);
 assert(!/\.innerHTML\s*=/.test(js+'\n'+diagnosticsJs),'Do not insert untrusted file contents via innerHTML');
 assert(/@media/.test(css),'Responsive stylesheet expected');
+// Sidecar rename and Semaphore export screens: controls exist and call the routes the CLI also has.
+for(const id of ['rename-sidecar','export-index','export-history','export-results'])assert(known.has(id),'Missing control: '+id);
+assert(js.includes("api('sidecar-preview'")&&js.includes("api('export',{kind,save:true}"),'The page calls sidecar-preview and export');
+assert(/id="export-results"[^>]*aria-live="polite"/.test(html),'The export result is announced');
+// Spoken progress (docs/VOICE.md): the script loads before app.js, the controls exist, and the module has no cloud path.
+const voiceJs=fs.readFileSync(path.join(__dirname,'..','Web','voice.js'),'utf8');
+new (require('vm').Script)(voiceJs,{filename:'Web/voice.js'});
+assert(html.indexOf('<script src="/voice.js" defer></script>')!==-1&&html.indexOf('/voice.js')<html.indexOf('/app.js'),'voice.js must load before app.js');
+for(const id of ['voice-toggle','voice-status'])assert(known.has(id),'Spoken progress control missing: '+id);
+assert(/localService\s*===\s*true/.test(voiceJs)&&!/fetch\(|XMLHttpRequest|WebSocket/.test(voiceJs),'voice.js picks only local voices and makes no network call');
+assert(/'\/voice\.js'/.test(fs.readFileSync(path.join(__dirname,'..','Start-BowerbirdStudio.ps1'),'utf8')),'voice.js must be in the static file allow-list');
 assert(/\/api\/stream/.test(js),'Streaming chat route expected');
 assert(html.includes('<script src="/diagnostics.js" defer></script>'),'Diagnostics script must be loaded');
 for(const id of ['view-diagnostics','diag-record-start','diag-record-stop','diag-issue-save','diag-support-export','diag-server-events','diag-issues'])assert(known.has(id),'Required diagnostics UI missing: '+id);

@@ -101,6 +101,8 @@ Write-BowerbirdDiagnostic -Event 'BOOT' -Message 'Starting Bowerbird Studio.'
 . (Join-Path $AppRoot 'Private\BowerbirdPass2.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdNamer.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdRenameStudio.ps1')
+. (Join-Path $AppRoot 'Private\BowerbirdSidecarRename.ps1')
+. (Join-Path $AppRoot 'Private\BowerbirdSemaphoreExport.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdActions.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdLlm.ps1')
 . (Join-Path $AppRoot 'Private\LazaretteBridge.ps1')
@@ -220,6 +222,7 @@ $script:StaticFiles=@{
  '/app.js'=@{File='Web\app.js';Type='application/javascript; charset=utf-8'}
  '/lifecycle.js'=@{File='Web\lifecycle.js';Type='application/javascript; charset=utf-8'}
  '/diagnostics.js'=@{File='Web\diagnostics.js';Type='application/javascript; charset=utf-8'}
+ '/voice.js'=@{File='Web\voice.js';Type='application/javascript; charset=utf-8'}
  '/shell.js'=@{File='Web\shell.js';Type='application/javascript; charset=utf-8'}
  '/icons.js'=@{File='Web\icons.js';Type='application/javascript; charset=utf-8'}
  '/style.css'=@{File='Web\style.css';Type='text/css; charset=utf-8'}

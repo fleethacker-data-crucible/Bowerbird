@@ -79,6 +79,7 @@ svg.icon{flex:none}
 .engine[data-state=connecting] .engine-dot{background:var(--fl-warning)}
 .engine[data-state=disconnected] .engine-dot,.engine[data-state=stopped] .engine-dot{background:var(--fl-danger)}
 .address,#workspace{font-family:var(--fl-font-mono)}
+.voice-toggle{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer}.voice-status{flex:0 1 auto;min-width:0;max-width:34ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .status-workspace{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
 #workspace{color:var(--fl-foreground);margin-left:4px}
 

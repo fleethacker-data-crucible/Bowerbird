@@ -59,6 +59,13 @@ try{
  Assert (@($registry|ForEach-Object {$_.name}|Select-Object -Unique).Count -eq $registry.Count) 'Command names are unique'
  Pass ('Command names match "bowerbird <noun> <verb>" ('+$registry.Count+' commands)')
 
+ # docs\CLI.md is the agent-facing list: every command and its route must be in the table, and no row may name a command that is gone.
+ $docText=[IO.File]::ReadAllText((Join-Path $repo 'docs\CLI.md'))
+ foreach($command in $registry){Assert ($docText.Contains('| `'+$command.name+'` | `'+$command.route+'` |')) ('docs\CLI.md lists '+$command.name+' with route '+$command.route)}
+ $docRows=@([regex]::Matches($docText,'(?m)^\| `(bowerbird [a-z-]+ [a-z-]+)` \|')|ForEach-Object {$_.Groups[1].Value})
+ foreach($name in $docRows){Assert (@($registry|Where-Object {$_.name -ceq $name}).Count -eq 1) ('docs\CLI.md row has a command: '+$name)}
+ Pass ('docs\CLI.md lists every command and route ('+$docRows.Count+' rows)')
+
  # commands --json is self-describing.
  $run=Invoke-Cli @('commands','--json')
  Assert ($run.code -eq 0) 'commands --json exits 0'
