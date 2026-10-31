@@ -175,6 +175,7 @@
   <span id="engine" class="engine" data-state="connecting" title="Connecting to the local server"><span class="engine-dot" aria-hidden="true"></span><span id="connection">Connecting</span></span>
   <span id="bound-address" class="address" title="The address this Studio is served from">—</span>
   <span class="status-workspace" title="Current scan folder">Workspace <span id="workspace">Local workspace</span></span>
+  <label class="voice-toggle" title="Off until you turn it on. Speaks only with a voice installed on this PC, never an online voice."><input type="checkbox" id="voice-toggle"> Speak progress</label><span id="voice-status" class="voice-status" aria-live="polite"></span>
   <span id="app-version" class="version">Bowerbird Studio 2.3</span>
  </footer>
 </div>
@@ -191,4 +192,4 @@
  </div>
 </div>
 <section id="session-ended" class="session-ended" hidden aria-live="polite"><div class="panel fl-card fl-empty"><img class="ended-emblem only-dark" src="/brand/emblem-dark.png" alt="Bowerbird" width="240" height="240"><img class="ended-emblem only-light" src="/brand/emblem-light.png" alt="Bowerbird" width="240" height="240"><span class="eyebrow">SESSION ENDED</span><h2>Bowerbird Studio has stopped</h2><p class="muted" id="session-ended-detail">The local server is no longer running. You can close this tab.</p><p class="muted">To continue, run Start-Bowerbird.bat again.</p></div></section>
-<script src="/icons.js" defer></script><script src="/lifecycle.js" defer></script><script src="/diagnostics.js" defer></script><script src="/app.js" defer></script></body></html>
+<script src="/icons.js" defer></script><script src="/lifecycle.js" defer></script><script src="/diagnostics.js" defer></script><script src="/voice.js" defer></script><script src="/app.js" defer></script></body></html>

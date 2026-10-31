@@ -39,6 +39,10 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             node --check Web/lifecycle.js
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            node --check Web/voice.js
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            node Tests/Voice.js
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             node Tests/UiContract.js
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
