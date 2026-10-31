@@ -73,7 +73,7 @@ function New-BowerbirdSemaphoreExport {
  switch($Kind){
   'index' {
    if(-not (Test-Path -LiteralPath $IndexPath)){throw 'Build an index first'}
-   $records=@(Get-BowerbirdSemaphoreIndexRecords ([IO.File]::ReadAllText($IndexPath)|ConvertFrom-Json))
+   $records=@(Get-BowerbirdSemaphoreIndexRecords (Read-BowerbirdIndexFile -Path $IndexPath))
    if($records.Count -eq 0){throw 'The index has no files to export'}
   }
   'history' {
