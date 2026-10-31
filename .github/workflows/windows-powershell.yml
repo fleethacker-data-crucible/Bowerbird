@@ -54,6 +54,9 @@ jobs:
       - name: Lifecycle presence rule and runtime files
         shell: powershell
         run: .\Tests\Lifecycle.ps1
+      - name: Data folder override and demo walkthrough
+        shell: powershell
+        run: .\Tests\DataDir.ps1
       - name: CLI/API parity
         shell: powershell
         run: .\Tests\CliParity.ps1

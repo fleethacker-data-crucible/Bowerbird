@@ -18,28 +18,34 @@
  [ValidateSet('Auto','HttpListener','Tcp','CompiledTcp')][string]$Transport='Auto',
  [switch]$FixedPort,
  [switch]$LocalDev,
+ [string]$DataDir='',
  [switch]$Stay,
  [switch]$Replace,
  [Parameter(ValueFromRemainingArguments=$true)][string[]]$Rest
 )
 $ErrorActionPreference='Stop'
 $script:AppRoot=$PSScriptRoot
+. (Join-Path $PSScriptRoot 'Private\BowerbirdDataDir.ps1')
 # The .bat launchers pass their arguments through, so accept --stay / --replace as well.
 $options=@($Rest)
 if($Root -match '^--?[A-Za-z]'){$options=@($Root)+$options;$Root=''}
+$expectDataDir=$false
 foreach($option in $options){
+ if($expectDataDir){$DataDir=[string]$option;$expectDataDir=$false;continue}
+ if([string]$option -match '^--?data-dir=(.+)$'){$DataDir=$Matches[1];continue}
  switch -Regex ([string]$option){
   '^--?stay$' {$Stay=[switch]$true}
   '^--?replace$' {$Replace=[switch]$true}
   '^--?no-browser$' {$NoBrowser=[switch]$true}
+  '^--?data-dir$' {$expectDataDir=$true}
   default {if($option){Write-Warning ('Ignoring unknown option '+$option)}}
  }
 }
 # Never write state to the downloaded/program installation directory, which may be read-only.
-$localData=[Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
-if(-not $localData){$localData=[IO.Path]::GetTempPath()}
-$script:DataRoot=Join-Path $localData $(if($LocalDev){'Bowerbird\LocalDev\State'}else{'Bowerbird\State'})
-$script:LogDir=Join-Path $localData $(if($LocalDev){'Bowerbird\LocalDev\Logs'}else{'Bowerbird\Logs'})
+$locations=Resolve-BowerbirdDataLocations -DataDir $DataDir -LocalDev:$LocalDev
+$script:DataDirOverride=$locations.Override
+$script:DataRoot=$locations.State
+$script:LogDir=$locations.Logs
 try{
  [IO.Directory]::CreateDirectory($script:DataRoot)|Out-Null
  [IO.Directory]::CreateDirectory($script:LogDir)|Out-Null
