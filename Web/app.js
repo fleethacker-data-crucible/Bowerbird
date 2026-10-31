@@ -28,7 +28,16 @@ async function api(route,body={}){
  if(!response.ok){if(route!=='client-event')record('API_ERROR',route);throw Error((data.error||'Request failed')+(data.requestId?' [Request '+data.requestId+']':''))}
  return data
 }
-async function run(action,done){try{notify('Working…');const result=await action();notify(done||'Done');return result}catch(err){notify(err.message,true);return null}}
+const spoken=window.BowerbirdVoice?window.BowerbirdVoice.create({synth:window.speechSynthesis,Utterance:window.SpeechSynthesisUtterance,lang:document.documentElement.lang||navigator.language||'en-US',isEnabled:()=>!!$('voice-toggle')&&$('voice-toggle').checked,onStatus:t=>{$('voice-status').textContent=t}}):null;
+async function run(action,done){const job=spoken?spoken.begin():null;try{notify('Working…');const result=await action();notify(done||'Done');if(job)job.end(true,done||'Done');return result}catch(err){notify(err.message,true);if(job)job.end(false);return null}}
+function initSpokenProgress(){
+ const box=$('voice-toggle');if(!spoken){$('voice-status').textContent='Spoken progress is unavailable. Progress stays on screen.';box.disabled=true;return}
+ let saved=false;try{saved=localStorage.getItem('bowerbird-voice')==='on'}catch(_){/* Storage may be disabled; the switch just starts off. */}
+ box.checked=saved;spoken.refreshStatus();
+ if(window.speechSynthesis&&window.speechSynthesis.addEventListener)window.speechSynthesis.addEventListener('voiceschanged',()=>spoken.refreshStatus());
+ box.addEventListener('change',()=>{try{localStorage.setItem('bowerbird-voice',box.checked?'on':'off')}catch(_){/* Not remembered; still works for this page. */}if(box.checked)spoken.announceEnabled();else{spoken.stop();spoken.refreshStatus()}});
+}
+initSpokenProgress();
 function size(bytes){if(bytes===null||bytes===undefined)return '—';if(bytes<1024)return bytes+' B';if(bytes<1048576)return (bytes/1024).toFixed(1)+' KB';return (bytes/1048576).toFixed(1)+' MB'}
 function show(view){document.querySelectorAll('.nav').forEach(b=>{const on=b.dataset.view===view;b.classList.toggle('active',on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.id==='view-'+view));$('page-title').textContent=({files:'File Explorer',search:'Intelligent Search',insights:'Insights & Agents',duplicates:'Duplicate Detection',organize:'File Organization',rename:'Smart Rename',code:'Code Insights',assistant:'AI Assistant',diagnostics:'Diagnostics & Feedback'})[view];if(window.BowerbirdDiagnostics)window.BowerbirdDiagnostics.page(view);if(view==='diagnostics')return window.BowerbirdDiagnostics?.activate();if(view==='files')return loadFiles();if(view==='insights')return loadInsights()}
 document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));

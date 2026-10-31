@@ -216,6 +216,7 @@ $script:StaticFiles=@{
  '/app.js'=@{File='Web\app.js';Type='application/javascript; charset=utf-8'}
  '/lifecycle.js'=@{File='Web\lifecycle.js';Type='application/javascript; charset=utf-8'}
  '/diagnostics.js'=@{File='Web\diagnostics.js';Type='application/javascript; charset=utf-8'}
+ '/voice.js'=@{File='Web\voice.js';Type='application/javascript; charset=utf-8'}
  '/shell.js'=@{File='Web\shell.js';Type='application/javascript; charset=utf-8'}
  '/icons.js'=@{File='Web\icons.js';Type='application/javascript; charset=utf-8'}
  '/style.css'=@{File='Web\style.css';Type='text/css; charset=utf-8'}
