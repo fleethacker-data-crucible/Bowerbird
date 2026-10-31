@@ -54,6 +54,9 @@ jobs:
       - name: Rename from SnapShackle OCR sidecars
         shell: powershell
         run: .\Tests\SidecarRename.ps1
+      - name: Semaphore data source export
+        shell: powershell
+        run: .\Tests\SemaphoreExport.ps1
       - name: CLI/API parity
         shell: powershell
         run: .\Tests\CliParity.ps1
