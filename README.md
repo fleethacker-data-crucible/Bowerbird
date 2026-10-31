@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/emblem-dark.png">
-    <img src="assets/brand/emblem-light.png" width="280" alt="Bowerbird emblem: a blue bowerbird perched on an anchor among collected blue treasures, inside a brass compass ring">
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/emblem-dark-transparent.png">
+    <img src="assets/brand/emblem-light-transparent.png" width="280" alt="Bowerbird emblem: a blue bowerbird perched on an anchor among collected blue treasures, inside a brass compass ring">
   </picture>
 </p>
 
@@ -123,7 +123,8 @@ If the GUI will not launch at all, run `Start-Bowerbird.bat diagnostics`. See [D
 | --- | --- |
 | Explorer | Native GUI folder selection, manual full-path selection, folder navigation, metadata and safe previews |
 | Smart Rename | Screenshot/image analysis using metadata and filename patterns, optional AI vision, preview, consented apply, undo |
-| Smart Index | SHA-256, image dHash, categories, metadata, optional full-text and optional OCR |
+| Smart Index | SHA-256, image dHash, categories, metadata, optional full-text and optional OCR. Re-indexing is incremental: files whose path, size and modified time are unchanged keep their saved hash and text (`--full` rebuilds everything) |
+| Index storage | The index (which can hold extracted document text) is encrypted at rest with Windows DPAPI for the current user; no key file or password. Plaintext indexes from earlier versions still read |
 | Search | BM25-inspired token scoring with cached per-document frequencies, file name boost |
 | Related Files | Local Jaccard-style lexical similarity for discovering related indexed files |
 | Duplicates | Exact SHA-256 groups and near-duplicate image hash groups |
@@ -133,7 +134,8 @@ If the GUI will not launch at all, run `Start-Bowerbird.bat diagnostics`. See [D
 | Local Agents | Read-only organization, duplication, and index-quality analysis; usable without cloud AI |
 | AI Chat | Optional Lazarette/AI endpoint/Grok integration, streamed browser output when provider supports SSE; fallback JSON responses |
 | Code Insights | Language and line statistics by extension |
-| Diagnostics & Feedback | Halyard-style session recorder, automatic browser/API errors, local issue reporting and resolution, request IDs, health checks, redacted support export |\n| Tests | Windows PowerShell parser check, JavaScript/DOM contract tests, smoke and real localhost HTTP API tests on both transports |
+| Diagnostics & Feedback | Halyard-style session recorder, automatic browser/API errors, local issue reporting and resolution, request IDs, health checks, redacted support export |
+| Tests | Windows PowerShell parser check, JavaScript/DOM contract tests, smoke and real localhost HTTP API tests on both transports |
 
 ### Important implementation distinctions
 
@@ -141,6 +143,8 @@ If the GUI will not launch at all, run `Start-Bowerbird.bat diagnostics`. See [D
 - **OCR**: If an approved `tesseract.exe` is already available on PATH, enable OCR when indexing. Nothing is auto-installed.
 - **AI vision**: The legacy CLI now requires `-AllowVision` and Studio requires both `-AllowCloudAI` and a separate explicit vision consent. No images are uploaded by ordinary indexing or local rename preview.
 - **Streaming**: The SSE bridge supports compatible providers; endpoints which decline streaming may return a complete JSON response. Model authentication still needs working approved credentials / Lazarette integration.
+- **Index encryption**: DPAPI ties the saved index to the Windows user and PC that wrote it. Another user or PC cannot read it and has to rebuild. `BOWERBIRD_INDEX_ENCRYPTION=off` keeps plaintext JSON (for example to inspect it by hand). This protects the file at rest; the running Studio still holds the index in memory, and search results show text snippets.
+- **Incremental index**: a file counts as unchanged when its path, size and modified time match the saved index. A file edited in place with the same size and a restored timestamp would be missed; use `--full` (or the *Rebuild* option) when in doubt. Asking for content or OCR the previous run did not have re-reads every file.
 - **Agents**: The local agents are deterministic and read-only. They are not autonomous LLM tool-call agents.
 - **Search**: Related-file matching is lexical, not neural embeddings. There is no on-device LLM included.
 

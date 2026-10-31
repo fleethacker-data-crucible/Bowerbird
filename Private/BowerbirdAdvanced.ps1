@@ -89,11 +89,21 @@ function New-BowerbirdSmartIndex {
  [CmdletBinding()]param(
   [Parameter(Mandatory)][string]$Path,[switch]$Recurse,[switch]$IncludeContent,
   [switch]$EnableExternalOcr,[ValidateRange(1000,500000)][int]$MaxTextCharacters=60000,
-  [ValidateRange(1,100000)][int]$MaxFiles=20000
+  [ValidateRange(1,100000)][int]$MaxFiles=20000,
+  # A previous index: files whose path, size and modified time are unchanged keep their saved hash and text.
+  $Previous
  )
  $folder=(Resolve-Path -LiteralPath $Path).ProviderPath
  if(-not (Test-Path -LiteralPath $folder -PathType Container)){throw 'Root is not a directory'}
  $files=New-Object Collections.Generic.List[object]
+ $stats=[ordered]@{Added=0;Changed=0;Unchanged=0;Removed=0}
+ $lookup=$null;$previousContent=$false;$previousOcr=$false
+ if($Previous -and $Previous.Files){
+  $lookup=New-Object 'System.Collections.Generic.Dictionary[string,object]' ([StringComparer]::OrdinalIgnoreCase)
+  foreach($old in @($Previous.Files)){if($old.Path){$lookup[[string]$old.Path]=$old}}
+  $previousContent=[bool]$Previous.IncludesContent;$previousOcr=[bool]$Previous.IncludesExternalOcr
+ }
+ $seen=New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
  $opts=@{LiteralPath=$folder;File=$true;ErrorAction='SilentlyContinue';Force=$true}
  if($Recurse){$opts.Recurse=$true}
  foreach($file in (Get-ChildItem @opts | Select-Object -First $MaxFiles)){
@@ -107,6 +117,18 @@ function New-BowerbirdSmartIndex {
    $part=$part.Parent
   }
   if($unsafe){continue}
+  $null=$seen.Add($file.FullName)
+  $reuse=Get-BowerbirdReusableEntry -Lookup $lookup -File $file -NeedContent ([bool]$IncludeContent) -NeedOcr ([bool]$EnableExternalOcr) -PreviousContent $previousContent -PreviousOcr $previousOcr
+  if($reuse){
+   $stats.Unchanged++
+   $files.Add([pscustomobject]@{
+    Path=$file.FullName;Name=$file.Name;Extension=$file.Extension;Category=(Get-BowerbirdCategory $file.Extension $file.Name)
+    Size=$file.Length;ModifiedUtc=$file.LastWriteTimeUtc.ToString('o')
+    SHA256=[string]$reuse.SHA256;VisualHash=[string]$reuse.VisualHash;Text=$(if($IncludeContent){[string]$reuse.Text}else{''});Error=''
+   })
+   continue
+  }
+  if($lookup -and $lookup.ContainsKey($file.FullName)){$stats.Changed++}else{$stats.Added++}
   $text='';$hash='';$visual='';$err=''
   if($IncludeContent){try{$text=Get-BowerbirdExtendedText -Path $file.FullName -MaxCharacters $MaxTextCharacters -EnableExternalOcr:$EnableExternalOcr}catch{$err=$_.Exception.Message}}
   try{$hash=(Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256 -ErrorAction Stop).Hash}catch{$err=$_.Exception.Message}
@@ -119,9 +141,11 @@ function New-BowerbirdSmartIndex {
    SHA256=$hash;VisualHash=$visual;Text=$text;Error=$err
   })
  }
+ if($lookup){$prefix=$folder.TrimEnd('\')+'\';foreach($key in $lookup.Keys){if(-not $seen.Contains($key) -and $key.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)){$stats.Removed++}}}
  return [pscustomobject]@{
   SchemaVersion=2;Root=$folder;IndexedUtc=[DateTime]::UtcNow.ToString('o')
   IncludesContent=[bool]$IncludeContent;IncludesExternalOcr=[bool]$EnableExternalOcr
+  Incremental=[bool]$lookup;Stats=[pscustomobject]$stats
   Files=@($files.ToArray())
  }
 }

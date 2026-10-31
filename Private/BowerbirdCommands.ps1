@@ -20,8 +20,8 @@ function Get-BowerbirdCommandRegistry {
   @{name='bowerbird workspace browse';route='/api/workspace/browse';summary='Choose a folder in the Windows folder dialog';interactive=$true;destructive=$true;inputs=@()}
   @{name='bowerbird files list';route='/api/files';summary='List a folder in the workspace';inputs=@($path)}
   @{name='bowerbird file preview';route='/api/preview';summary='Read a text file (256 KB at most)';inputs=@((New-BowerbirdInput 'path' 'path' 'string' $true 'Workspace-relative file path'))}
-  @{name='bowerbird index build';route='/api/index';summary='Build the local index of the workspace'
-   inputs=@($path,$recurse,(New-BowerbirdInput 'include-content' 'includeContent' 'bool' $false 'Index text content (approved workspaces only)'),(New-BowerbirdInput 'ocr' 'ocr' 'bool' $false 'Use an installed OCR tool'))}
+  @{name='bowerbird index build';route='/api/index';summary='Build the local index of the workspace (unchanged files are reused)'
+   inputs=@($path,$recurse,(New-BowerbirdInput 'include-content' 'includeContent' 'bool' $false 'Index text content (approved workspaces only)'),(New-BowerbirdInput 'ocr' 'ocr' 'bool' $false 'Use an installed OCR tool'),(New-BowerbirdInput 'full' 'full' 'bool' $false 'Rebuild from scratch instead of reusing unchanged files'))}
   @{name='bowerbird index search';route='/api/search';summary='Search the index';needs='index';inputs=@((New-BowerbirdInput 'query' 'query' 'string' $true 'Search text'))}
   @{name='bowerbird index insights';route='/api/insights';summary='Categories, sizes and types from the index';needs='index';inputs=@()}
   @{name='bowerbird index related';route='/api/related';summary='Files related to one file';needs='index';inputs=@((New-BowerbirdInput 'path' 'path' 'string' $true 'Workspace-relative file path'))}
