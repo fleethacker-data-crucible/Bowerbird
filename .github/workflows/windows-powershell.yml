@@ -48,6 +48,9 @@ jobs:
       - name: Intelligence engine smoke test
         shell: powershell
         run: .\Tests\Smoke.ps1
+      - name: Rename collisions
+        shell: powershell
+        run: .\Tests\RenameCollision.ps1
       - name: Lifecycle presence rule and runtime files
         shell: powershell
         run: .\Tests\Lifecycle.ps1
