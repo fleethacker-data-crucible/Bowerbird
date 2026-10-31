@@ -123,6 +123,8 @@ pair from that text. It only proposes; you apply it through the same plan and jo
     Start-Bowerbird-Console.bat plan apply --root "%LOCALAPPDATA%\SnapShackle\Captures" --id <id from sidecar preview> --yes
     Start-Bowerbird-Console.bat plan undo --root "%LOCALAPPDATA%\SnapShackle\Captures" --yes
 
+In Studio, Smart Rename > Propose Names from SnapShackle Text does the preview; the same Apply button then applies it.
+
 Rules:
 
 - Only automatic names are renamed: `<SnapShackle|CutterMk|Lasso|SnipHero>-<yyyyMMdd>-<HHmmss>-<fff>-<8 hex>.png`.

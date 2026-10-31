@@ -5,6 +5,8 @@ Bowerbird can write its index and its move history as flat JSON records. Semapho
     Start-Bowerbird-Console.bat export semaphore --kind index   --root "C:\Work\Inbox" --save --json
     Start-Bowerbird-Console.bat export semaphore --kind history --root "C:\Work\Inbox" --save --json
 
+In Studio, Insights > Export for Semaphore has Export Index and Export Move History buttons; they save the file (as with `--save`) and show where it went.
+
 `--save` writes `bowerbird-index.json` or `bowerbird-history.json` into the workspace's state folder, under `exports\` (next to the saved index; the result's `savedTo` gives the full path), and replaces the previous file of that kind. It never writes into the workspace. Without `--save` the records come back in the command result, and `--out file` writes the whole result envelope. The same route is `POST /api/export` (`{"kind":"index","save":true}`) while Studio runs. `index` needs an index (`index build`); `history` needs at least one applied plan.
 
 ## File shape

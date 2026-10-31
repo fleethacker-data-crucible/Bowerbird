@@ -17,6 +17,10 @@ for(const id of required)assert(known.has(id),'Missing HTML id: '+id);
 for(const [,view] of html.matchAll(/data-view="([^"]+)"/g))assert(known.has('view-'+view),'Navigation target missing: '+view);
 assert(!/\.innerHTML\s*=/.test(js+'\n'+diagnosticsJs),'Do not insert untrusted file contents via innerHTML');
 assert(/@media/.test(css),'Responsive stylesheet expected');
+// Sidecar rename and Semaphore export screens: controls exist and call the routes the CLI also has.
+for(const id of ['rename-sidecar','export-index','export-history','export-results'])assert(known.has(id),'Missing control: '+id);
+assert(js.includes("api('sidecar-preview'")&&js.includes("api('export',{kind,save:true}"),'The page calls sidecar-preview and export');
+assert(/id="export-results"[^>]*aria-live="polite"/.test(html),'The export result is announced');
 // Spoken progress (docs/VOICE.md): the script loads before app.js, the controls exist, and the module has no cloud path.
 const voiceJs=fs.readFileSync(path.join(__dirname,'..','Web','voice.js'),'utf8');
 new (require('vm').Script)(voiceJs,{filename:'Web/voice.js'});
