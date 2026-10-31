@@ -111,6 +111,11 @@ try{
  # The same dispatcher as the browser, end to end across separate processes.
  $run=Invoke-CliJson @('index','build','--recurse','--include-content')
  Assert ($run.code -eq 0 -and $run.data.result.indexed -ge 3) 'index build'
+ Assert ($run.data.result.encrypted -and $run.data.result.added -ge 3 -and -not $run.data.result.incremental) 'first index build is full and saved encrypted'
+ $run=Invoke-CliJson @('index','build','--recurse','--include-content')
+ Assert ($run.code -eq 0 -and $run.data.result.incremental -and $run.data.result.unchanged -ge 3 -and $run.data.result.added -eq 0) 'second index build reuses unchanged files (incremental)'
+ $run=Invoke-CliJson @('index','build','--recurse','--include-content','--full')
+ Assert ($run.code -eq 0 -and -not $run.data.result.incremental -and $run.data.result.unchanged -eq 0) 'index build --full rebuilds everything'
  $run=Invoke-CliJson @('index','search','--query','bowerbird')
  Assert ($run.code -eq 0 -and @($run.data.result.items).Count -ge 2) 'index search after index build'
  $run=Invoke-CliJson @('index','duplicates')
