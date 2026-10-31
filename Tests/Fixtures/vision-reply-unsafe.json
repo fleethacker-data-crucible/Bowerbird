@@ -1,0 +1,1 @@
+{"id":"chatcmpl-fixture-5","object":"chat.completion","model":"fixture-vision","choices":[{"index":0,"message":{"role":"assistant","content":"{\"short_description\":\"x\",\"category\":\"Other\",\"key_text\":\"\",\"suggested_slug\":\"..\\\\..\\\\Windows\\\\evil:name*?\"}"},"finish_reason":"stop"}]}

@@ -1,0 +1,1 @@
+{"id":"chatcmpl-fixture-1","object":"chat.completion","created":1700000000,"model":"fixture-model","choices":[{"index":0,"message":{"role":"assistant","content":"Group the invoices by year, then by vendor."},"finish_reason":"stop"}],"usage":{"prompt_tokens":42,"completion_tokens":9,"total_tokens":51}}

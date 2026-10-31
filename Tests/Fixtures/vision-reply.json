@@ -1,0 +1,1 @@
+{"id":"chatcmpl-fixture-3","object":"chat.completion","model":"fixture-vision","choices":[{"index":0,"message":{"role":"assistant","content":"{\"short_description\":\"PowerShell error dialog\",\"category\":\"Screenshot\",\"key_text\":\"Access is denied\",\"suggested_slug\":\"powershell-access-denied-error\"}"},"finish_reason":"stop"}]}

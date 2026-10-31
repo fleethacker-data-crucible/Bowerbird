@@ -48,6 +48,9 @@ jobs:
       - name: Intelligence engine smoke test
         shell: powershell
         run: .\Tests\Smoke.ps1
+      - name: AI chat, streaming, vision rename and Fairlead (mock provider)
+        shell: powershell
+        run: .\Tests\AiMock.ps1
       - name: Encrypted and incremental index
         shell: powershell
         run: .\Tests\IndexStore.ps1

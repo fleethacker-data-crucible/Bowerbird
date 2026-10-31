@@ -1,0 +1,1 @@
+{"id":"chatcmpl-fixture-4","object":"chat.completion","model":"fixture-vision","choices":[{"index":0,"message":{"role":"assistant","content":"Here you go:\n```json\n{\"short_description\":\"Outlook inbox triage\",\"category\":\"UI\",\"key_text\":\"Inbox\",\"suggested_slug\":\"outlook-inbox-triage\"}\n```"},"finish_reason":"stop"}]}

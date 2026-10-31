@@ -22,6 +22,18 @@ function Get-BowerbirdMimeType {
   default{return 'image/png'}
  }
 }
+function ConvertTo-BowerbirdSlug {
+ # A filesystem-safe slug from model text: lowercase letters, digits and single hyphens, at most six words.
+ param([string]$Text)
+ if([string]::IsNullOrWhiteSpace($Text)){return $null}
+ $slug=(($Text.ToLowerInvariant() -replace '[^a-z0-9]+','-').Trim('-'))
+ if(-not $slug){return $null}
+ $words=@($slug.Split('-')|Where-Object {$_}|Select-Object -First 6)
+ $slug=($words -join '-')
+ if($slug.Length -gt 60){$slug=$slug.Substring(0,60).Trim('-')}
+ if(-not $slug){return $null}
+ return $slug
+}
 function Invoke-BowerbirdPass2 {
  [CmdletBinding()]param([Parameter(Mandatory=$true)][System.IO.FileInfo]$File,[pscustomobject]$Pass1Result,[string]$Profile='Auto')
  $meta=$Pass1Result.Metadata;$b64=Get-BowerbirdImageBase64 -File $File
@@ -51,10 +63,13 @@ Rules:
  $jsonText=$raw;if($raw -match '(?s)\{.*\}'){$jsonText=$Matches[0]}
  $parsed=$null;try{$parsed=$jsonText|ConvertFrom-Json -ErrorAction Stop}catch{Write-Verbose ("Could not parse vision JSON: {0}" -f $raw)}
  $slug=$null;$desc=$null
- if($parsed){$slug=$parsed.suggested_slug;$desc=$parsed.short_description;if(-not $slug -and $desc){$slug=($desc -replace '[^a-zA-Z0-9\s-]','' -replace '\s+','-').ToLowerInvariant()}}
+ if($parsed){$desc=[string]$parsed.short_description;$slug=ConvertTo-BowerbirdSlug ([string]$parsed.suggested_slug);if(-not $slug){$slug=ConvertTo-BowerbirdSlug $desc}}
  $datePart=$Pass1Result.DatePart;if(-not $datePart -and $meta -and $meta.DateTaken){$datePart=$meta.DateTaken.ToString('yyyy-MM-dd')}
  $suggested=$null
  if($slug){$parts=@();if($datePart){$parts+=$datePart};$parts+=$slug;$suggested=($parts -join '_')+$File.Extension.ToLowerInvariant()}
+ if(-not $suggested){
+  return [pscustomobject]@{Confidence=$Pass1Result.Confidence;SuggestedName=$Pass1Result.SuggestedName;Reasoning=$Pass1Result.Reasoning+'; vision reply had no usable name';Source='pass1-fallback';VisionText=$raw;NeedsVision=$false}
+ }
  $reasonText='Vision: '+[string]$desc
  return [pscustomobject]@{Confidence=0.88;SuggestedName=$suggested;Reasoning=$reasonText;Source='vision';VisionText=$raw;Parsed=$parsed;NeedsVision=$false;DatePart=$datePart;DescPart=$slug}
 }
