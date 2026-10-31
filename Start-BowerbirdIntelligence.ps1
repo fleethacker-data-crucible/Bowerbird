@@ -15,7 +15,7 @@ switch($Action){
  'Undo' {Undo-BowerbirdPlan -JournalPath $JournalPath -Confirm:$false}
  'Apply' {if(-not $ConfirmApply){throw 'Apply requires -ConfirmApply'};$plan=Get-Content -LiteralPath $PlanPath -Raw|ConvertFrom-Json;Invoke-BowerbirdPlan -Plan $plan -JournalPath $JournalPath -Apply -Confirm:$false}
  default {
-  $index=Get-Content -LiteralPath $IndexPath -Raw|ConvertFrom-Json
+  $index=Read-BowerbirdIndexFile -Path $IndexPath
   switch($Action){
    'Search' {Search-BowerbirdIndex -Index $index -Query $Query}
    'Duplicates' {Find-BowerbirdDuplicates -Index $index}

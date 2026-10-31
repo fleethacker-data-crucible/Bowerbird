@@ -51,9 +51,15 @@ jobs:
       - name: Rename collisions
         shell: powershell
         run: .\Tests\RenameCollision.ps1
+      - name: Encrypted and incremental index
+        shell: powershell
+        run: .\Tests\IndexStore.ps1
       - name: Lifecycle presence rule and runtime files
         shell: powershell
         run: .\Tests\Lifecycle.ps1
+      - name: Data folder override and demo walkthrough
+        shell: powershell
+        run: .\Tests\DataDir.ps1
       - name: CLI/API parity
         shell: powershell
         run: .\Tests\CliParity.ps1

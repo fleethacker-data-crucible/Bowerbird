@@ -29,6 +29,7 @@ The CLI runs in its own process. It opens no port and starts no server.
 | `--input <file.json>` | Read request fields from a JSON object. Options on the command line override them. |
 | `--allow-cloud-ai` | The same opt-in as Studio's `-AllowCloudAI`. Without it, AI commands fail. |
 | `--local-dev` | Use the LocalDev state folder, as `Launch-LocalDev.bat` does. |
+| `--data-dir <folder>` | Keep state (`State`) and logs (`Logs`) in this folder and write nothing under `%LOCALAPPDATA%`. The same as `BOWERBIRD_DATA_DIR` and Studio's `-DataDir`; the option wins. See [DEMO-WALKTHROUGH.md](DEMO-WALKTHROUGH.md). |
 
 - Put options after the two command words.
 - A flag with no value means `true` (`--recurse`); you can also write `--recurse false`.

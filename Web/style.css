@@ -26,7 +26,7 @@ svg.icon{flex:none}
 /* Brand: the full emblem with its wordmark when expanded, the emblem's circle when collapsed. */
 .brand{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:var(--fl-header-height);padding:4px 12px 8px;border-bottom:1px solid var(--fl-border)}
 /* Nine views plus the footer: the emblem scales with the window height so the nav still fits. */
-.brand .brand-emblem{width:clamp(112px,16vh,184px);height:auto}
+.brand .brand-emblem{width:clamp(112px,16vh,184px);max-width:100%;height:auto}
 .brand .brand-icon{display:none;flex:none;width:40px;height:40px}
 :root.sidebar-collapsed .brand .brand-emblem{display:none}
 .sidebar-collapsed .brand .brand-icon{display:block}
