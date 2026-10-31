@@ -4,7 +4,7 @@
    Start-Bowerbird-Console.bat <noun> <verb> [--key value ...] [--json] [--out file] [--yes] [--dry-run]
    Start-Bowerbird-Console.bat commands [--json]
  Global options: --root <folder> (workspace; default as Studio), --allow-cloud-ai, --local-dev,
- --input <file.json> (body fields as JSON). Commands run in this process through the same dispatcher
+ --data-dir <folder> (state and logs go there, not under %LOCALAPPDATA%), --input <file.json> (body fields as JSON). Commands run in this process through the same dispatcher
  as the browser (Private\BowerbirdApi.ps1); no server or port is opened.
  Exit codes: 0 ok, 1 error, 2 usage (including a destructive command without --yes).
 #>
@@ -16,8 +16,9 @@ $AllowCloudAI=$false
 $utf8=New-Object Text.UTF8Encoding $false
 try{[Console]::OutputEncoding=$utf8}catch{}
 . (Join-Path $AppRoot 'Private\BowerbirdCommands.ps1')
+. (Join-Path $AppRoot 'Private\BowerbirdDataDir.ps1')
 
-$script:Json=$false;$script:Out='';$yes=$false;$dryRun=$false;$root='';$localDev=$false;$inputFile=''
+$script:Json=$false;$script:Out='';$yes=$false;$dryRun=$false;$root='';$localDev=$false;$inputFile='';$dataDir=''
 $script:CommandName=''
 function Write-BowerbirdCliOutput([string]$Text){
  if($script:Out){
@@ -54,9 +55,9 @@ for($i=0;$i -lt $argv.Count;$i++){
  if($name -ceq 'allow-cloud-ai'){$AllowCloudAI=$true;continue}
  if($name -ceq 'local-dev'){$localDev=$true;continue}
  if(-not $hasValue -and $i+1 -lt $argv.Count -and -not ([string]$argv[$i+1]).StartsWith('--')){$value=[string]$argv[$i+1];$i++;$hasValue=$true}
- if($name -cmatch '^(out|root|input)$'){
+ if($name -cmatch '^(out|root|input|data-dir)$'){
   if(-not $hasValue -or -not $value){Exit-BowerbirdCli 2 ('--'+$name+' needs a value')}
-  if($name -ceq 'out'){$script:Out=$value}elseif($name -ceq 'root'){$root=$value}else{$inputFile=$value}
+  if($name -ceq 'out'){$script:Out=$value}elseif($name -ceq 'root'){$root=$value}elseif($name -ceq 'data-dir'){$dataDir=$value}else{$inputFile=$value}
   continue
  }
  if($name -cnotmatch '^[a-z][a-z-]*$'){Exit-BowerbirdCli 2 ('Unknown option '+$token)}
@@ -124,10 +125,10 @@ if($command.destructive -and -not $yes){Exit-BowerbirdCli 2 ($command.name+' cha
 
 # The same user-local state as Studio; never the program folder.
 try{
- $localData=[Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
- if(-not $localData){$localData=[IO.Path]::GetTempPath()}
- $script:DataRoot=Join-Path $localData $(if($localDev){'Bowerbird\LocalDev\State'}else{'Bowerbird\State'})
- $script:LogDir=Join-Path $localData $(if($localDev){'Bowerbird\LocalDev\Logs'}else{'Bowerbird\Logs'})
+ $locations=Resolve-BowerbirdDataLocations -DataDir $dataDir -LocalDev:$localDev
+ $script:DataDirOverride=$locations.Override
+ $script:DataRoot=$locations.State
+ $script:LogDir=$locations.Logs
  [IO.Directory]::CreateDirectory($script:DataRoot)|Out-Null
  [IO.Directory]::CreateDirectory($script:LogDir)|Out-Null
  $script:LogFile=Join-Path $script:LogDir ('cli-'+(Get-Date -Format 'yyyyMMdd')+'.jsonl')

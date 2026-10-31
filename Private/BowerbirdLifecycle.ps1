@@ -112,7 +112,9 @@ function Get-BowerbirdRuntimeDirectories {
  # read-only), so runtime files live in those Logs folders, not in a logs\ folder next to the scripts.
  $base=[Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
  if(-not $base){$base=[IO.Path]::GetTempPath()}
- return @((Join-Path $base 'Bowerbird\Logs'),(Join-Path $base 'Bowerbird\LocalDev\Logs'))
+ $dirs=@((Join-Path $base 'Bowerbird\Logs'),(Join-Path $base 'Bowerbird\LocalDev\Logs'))
+ if($env:BOWERBIRD_DATA_DIR){try{. (Join-Path $PSScriptRoot 'BowerbirdDataDir.ps1');$dirs+=(Resolve-BowerbirdDataLocations).Logs}catch{}}
+ return $dirs
 }
 
 function Write-BowerbirdRuntimeFile {
