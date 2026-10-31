@@ -133,6 +133,21 @@ try{
  Assert ($run.code -eq 0 -and (Test-Path -LiteralPath (Join-Path $space 'first.txt'))) 'plan undo --yes moves them back'
  Pass 'index build, search, plan create, apply and undo through the CLI'
 
+ # Tags and cleanup recipes through the CLI: a recipe proposes moves; nothing moves until plan apply.
+ $run=Invoke-CliJson @('tags','add','--path','first.txt','--tag','Invoice-2026')
+ Assert ($run.code -eq 0 -and ($run.data.result.tags -contains 'invoice-2026')) 'tags add normalises and saves the tag'
+ $run=Invoke-CliJson @('tags','list','--tag','invoice-2026')
+ Assert ($run.code -eq 0 -and @($run.data.result.items).Count -eq 1) 'tags list filters by tag'
+ $run=Invoke-CliJson @('tags','add','--path','..\Windows','--tag','x')
+ Assert ($run.code -eq 1) 'tags add refuses a path outside the workspace'
+ $run=Invoke-CliJson @('recipes','plan','--name','duplicate-copies','--destination','Organized')
+ Assert ($run.code -eq 0 -and $run.data.result.count -eq 1 -and (Test-Path -LiteralPath (Join-Path $space 'second.txt'))) 'recipes plan proposes the second copy and moves nothing'
+ $run=Invoke-CliJson @('recipes','plan','--name','nope')
+ Assert ($run.code -eq 1) 'recipes plan refuses an unknown recipe'
+ $run=Invoke-CliJson @('recipes','list')
+ Assert ($run.code -eq 0 -and @($run.data.result.recipes).Count -eq 3) 'recipes list shows the three recipes'
+ Pass 'Tags and cleanup recipes through the CLI (propose only)'
+
  # The console launcher routes "<noun> <verb>" to the CLI and passes the exit code through.
  $null=& cmd.exe /d /c ('"'+$launcher+'" status nope --json') 2>$null
  Assert ($LASTEXITCODE -eq 2) ('Console launcher passes the CLI exit code (got '+$LASTEXITCODE+')')
