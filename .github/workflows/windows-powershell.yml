@@ -48,6 +48,9 @@ jobs:
       - name: Intelligence engine smoke test
         shell: powershell
         run: .\Tests\Smoke.ps1
+      - name: Encrypted and incremental index
+        shell: powershell
+        run: .\Tests\IndexStore.ps1
       - name: Lifecycle presence rule and runtime files
         shell: powershell
         run: .\Tests\Lifecycle.ps1
