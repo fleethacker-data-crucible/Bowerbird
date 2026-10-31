@@ -115,6 +115,7 @@ try{
  Assert ($run.code -eq 1) 'a path outside the workspace is refused'
  Pass 'CLI: sidecar preview, plan apply (needs --yes) and plan undo across separate processes'
  Write-Host ("PASS: Bowerbird sidecar rename ($script:passed groups)") -ForegroundColor Green
+ exit 0   # the last CLI call above exits 1 on purpose; do not leak it as the script result
 }catch{
  Write-Host ('FAIL: '+$_.Exception.Message) -ForegroundColor Red
  exit 1

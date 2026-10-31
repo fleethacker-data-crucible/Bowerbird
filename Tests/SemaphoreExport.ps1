@@ -123,6 +123,7 @@ try{
  Assert (@($records|Where-Object {$_.destination -ceq 'Moved/Text/first.txt' -or $_.destination -ceq 'Moved/Text/second.txt'}).Count -eq 2) 'destinations are workspace-relative'
  Pass 'History export: two runs (one archived and undone, one current), documented fields and types'
  Write-Host ("PASS: Bowerbird Semaphore export ($script:passed groups)") -ForegroundColor Green
+ exit 0   # an earlier CLI call exits 1 on purpose; do not leak it as the script result
 }catch{
  Write-Host ('FAIL: '+$_.Exception.Message) -ForegroundColor Red
  exit 1
