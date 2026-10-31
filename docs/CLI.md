@@ -82,6 +82,7 @@ output as the `ok:false` object. Otherwise they go to standard error.
 | `bowerbird code stats` | `/api/code` | `--path`, `--recurse` | |
 | `bowerbird rename preview` | `/api/rename-preview` | `--path`, `--recurse`, `--use-vision`, `--consent`, `--max-vision` | saves the move plan; vision needs `--allow-cloud-ai` and `--consent VISION_UPLOAD` |
 | `bowerbird sidecar preview` | `/api/sidecar-preview` | `--path`, `--recurse` | saves the move plan (a capture and its sidecar are two operations); apply and undo are `plan apply` and `plan undo` |
+| `bowerbird export semaphore` | `/api/export` | `--kind` (required: index, history), `--save` | read-only; `index` needs an index, `history` needs a journal; see [SEMAPHORE-EXPORT.md](SEMAPHORE-EXPORT.md) |
 | `bowerbird plan create` | `/api/plan` | `--rules` (required, JSON), `--destination` | needs index; saves the move plan |
 | `bowerbird plan apply` | `/api/apply` | `--id` (required) | destructive; needs plan; the id must match the saved plan |
 | `bowerbird plan undo` | `/api/undo` | | destructive; needs journal |
