@@ -35,7 +35,9 @@ function Find-BowerbirdLazaretteRoot {
   foreach($name in @('Lazarette','arc')){[void]$candidates.Add((Join-Path $parent $name))}
  }
  if($env:USERPROFILE){foreach($name in @('Lazarette','arc')){[void]$candidates.Add((Join-Path $env:USERPROFILE ('Projects\'+$name)))}}
- if($env:LOCALAPPDATA -and -not $script:DataDirOverride){foreach($name in @('Lazarette','ARC')){[void]$candidates.Add((Join-Path $env:LOCALAPPDATA $name))}}
+ if($env:LOCALAPPDATA){foreach($name in @('Lazarette','ARC')){[void]$candidates.Add((Join-Path $env:LOCALAPPDATA $name))}}
+ # A run with its own data folder (demo, test) does not look in the real %LOCALAPPDATA%.
+ if($script:DataDirOverride -and $env:LOCALAPPDATA){[void]$candidates.RemoveAll([Predicate[string]]{param($c) $c -and $c.StartsWith($env:LOCALAPPDATA,[StringComparison]::OrdinalIgnoreCase)})}
  # Prefer a current (ARC 5 / Lazarette) install anywhere in the list over a legacy pm.ps1-only one.
  $legacy=$null
  foreach($c in $candidates){
