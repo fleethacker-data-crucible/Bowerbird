@@ -88,7 +88,7 @@ function Invoke-Api([string]$Route,$Body){
    Write-BowerbirdDiagnostic -Event ('UI_'+$event) -Message $target
    return @{ok=$true}
   }
-  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;port=$Port;transport=(Get-BowerbirdTransportName);indexExists=(Test-Path $script:IndexPath);indexEncrypted=(Test-BowerbirdIndexEncrypted -Path $script:IndexPath);ocrAvailable=[bool](Get-BowerbirdOcrCommand);fairlead=@{enabled=(Test-BowerbirdFairleadEnabled);configured=[bool][Environment]::GetEnvironmentVariable('BOWERBIRD_FAIRLEAD_URL')};cloudAI=[bool]$AllowCloudAI;version='2.3';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional','incremental-index','encrypted-index','fairlead-optin','pdf-text-operators','rename','workspace-switch','workspace-picker','diagnostics','feedback','session-recording','lifecycle')}}
+  '/api/status' {return @{ok=$true;root=$script:AllowedRoot;port=$Port;transport=(Get-BowerbirdTransportName);indexExists=(Test-Path $script:IndexPath);indexEncrypted=(Test-BowerbirdIndexEncrypted -Path $script:IndexPath);ocrAvailable=[bool](Get-BowerbirdOcrCommand);fairlead=@{enabled=(Test-BowerbirdFairleadEnabled);configured=[bool][Environment]::GetEnvironmentVariable('BOWERBIRD_FAIRLEAD_URL')};cloudAI=[bool]$AllowCloudAI;version='2.3';features=@('files','index','search','duplicates','visual','code','plan','apply','undo','preview','ai','stream','media','insights','related','agents','pdf','ocr-optional','incremental-index','encrypted-index','fairlead-optin','tags','recipes','pdf-text-operators','rename','workspace-switch','workspace-picker','diagnostics','feedback','session-recording','lifecycle')}}
   '/api/workspace/select' {
    return Set-BowerbirdWorkspace -Folder ([string]$Body.path)
   }
@@ -195,6 +195,36 @@ function Invoke-Api([string]$Route,$Body){
    $messages=Get-BowerbirdMessages $Body
    $answer=Invoke-BowerbirdChat -Messages $messages -Profile Auto -MaxTokens 900
    return @{text=$answer.Text;model=$answer.Model;profile=$answer.Profile}
+  }
+  '/api/tags/list' {
+   $map=Read-BowerbirdTags -Path (Get-BowerbirdTagsPath $script:IndexPath)
+   $only=[string]$Body.tag;if($only){$only=ConvertTo-BowerbirdTag $only}
+   $items=foreach($key in $map.Keys){
+    if($only -and -not (@($map[$key]) -contains $only)){continue}
+    @{path=(Relative-Path $key);tags=@($map[$key])}
+   }
+   return @{items=@($items)}
+  }
+  '/api/tags/add' {
+   $full=Resolve-WorkspacePath ([string]$Body.path)
+   $tags=Add-BowerbirdTag -TagsPath (Get-BowerbirdTagsPath $script:IndexPath) -FilePath $full -Tag ([string]$Body.tag)
+   return @{path=(Relative-Path $full);tags=@($tags)}
+  }
+  '/api/tags/remove' {
+   $full=Resolve-WorkspacePath ([string]$Body.path)
+   $left=Remove-BowerbirdTag -TagsPath (Get-BowerbirdTagsPath $script:IndexPath) -FilePath $full -Tag ([string]$Body.tag)
+   return @{path=(Relative-Path $full);tags=@($left)}
+  }
+  '/api/recipes/list' {return Get-BowerbirdRecipeCatalog}
+  '/api/recipes/plan' {
+   $destination=Resolve-WorkspacePath ([string]$Body.destination)
+   $days=if($Body.days){[int]$Body.days}else{365}
+   $plan=New-BowerbirdRecipePlan -Name ([string]$Body.name) -Index (Read-Index) -DestinationRoot $destination -TagsPath (Get-BowerbirdTagsPath $script:IndexPath) -Tag ([string]$Body.tag) -Days $days
+   foreach($op in $plan.Operations){Assert-WorkspaceAbsolute $op.Source;Assert-WorkspaceAbsolute $op.Destination}
+   Save-JsonFile $script:PlanPath $plan
+   return @{id=$plan.Id;recipe=$plan.Recipe;count=@($plan.Operations).Count
+    operations=@($plan.Operations|ForEach-Object {@{source=(Relative-Path $_.Source);destination=(Relative-Path $_.Destination);reason=$_.Reason}})
+    skipped=@($plan.Skipped|ForEach-Object {@{source=(Relative-Path $_.Source);reason=$_.Reason}})}
   }
   '/api/commands' {return Get-BowerbirdCommandCatalog}
   default {throw 'Unknown endpoint'}

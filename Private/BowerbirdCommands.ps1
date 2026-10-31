@@ -48,6 +48,15 @@ function Get-BowerbirdCommandRegistry {
    inputs=@((New-BowerbirdInput 'kind' 'kind' 'string' $true 'error, not-working, wrong-result, performance, suggestion or other'),(New-BowerbirdInput 'severity' 'severity' 'string' $true 'low, medium, high or blocking'),(New-BowerbirdInput 'feature' 'feature' 'string' $true 'Feature area, for example search'),(New-BowerbirdInput 'title' 'title' 'string' $true 'Title'),(New-BowerbirdInput 'actual' 'actual' 'string' $false 'Observed behavior'),(New-BowerbirdInput 'expected' 'expected' 'string' $false 'Expected behavior'),(New-BowerbirdInput 'steps' 'steps' 'string' $false 'Reproduction steps'))}
   @{name='bowerbird feedback status';route='/api/feedback/status';summary='Mark a feedback issue open or resolved'
    inputs=@((New-BowerbirdInput 'id' 'id' 'string' $true 'Issue id'),(New-BowerbirdInput 'status' 'status' 'string' $true 'open or resolved'))}
+  @{name='bowerbird tags list';route='/api/tags/list';summary='Tagged files, optionally one tag'
+   inputs=@((New-BowerbirdInput 'tag' 'tag' 'string' $false 'Only files with this tag'))}
+  @{name='bowerbird tags add';route='/api/tags/add';summary='Add a tag to a file (the file is not changed)'
+   inputs=@($path,(New-BowerbirdInput 'tag' 'tag' 'string' $true 'Tag: lowercase letters, digits, hyphens'))}
+  @{name='bowerbird tags remove';route='/api/tags/remove';summary='Remove a tag from a file'
+   inputs=@($path,(New-BowerbirdInput 'tag' 'tag' 'string' $true 'Tag to remove'))}
+  @{name='bowerbird recipes list';route='/api/recipes/list';summary='Cleanup recipes (they propose moves; nothing is deleted)';inputs=@()}
+  @{name='bowerbird recipes plan';route='/api/recipes/plan';summary='Propose a cleanup recipe as the move plan (apply it with plan apply)';needs='index'
+   inputs=@((New-BowerbirdInput 'name' 'name' 'string' $true 'duplicate-copies, old-screenshots or tagged'),(New-BowerbirdInput 'destination' 'destination' 'string' $false 'Workspace-relative destination folder'),(New-BowerbirdInput 'tag' 'tag' 'string' $false 'Tag for the tagged recipe'),(New-BowerbirdInput 'days' 'days' 'int' $false 'Age in days for old-screenshots (default 365)'))}
   @{name='bowerbird commands list';route='/api/commands';summary='This list of commands';inputs=@()}
  )
  $script:BowerbirdCommandRegistry=@($list|ForEach-Object {

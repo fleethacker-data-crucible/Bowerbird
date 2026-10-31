@@ -48,6 +48,9 @@ jobs:
       - name: Intelligence engine smoke test
         shell: powershell
         run: .\Tests\Smoke.ps1
+      - name: Tags and cleanup recipes (synthetic files, propose then undo)
+        shell: powershell
+        run: .\Tests\TagsRecipes.ps1
       - name: PDF text and OCR (synthetic files, stand-in OCR program)
         shell: powershell
         run: .\Tests\PdfOcr.ps1
