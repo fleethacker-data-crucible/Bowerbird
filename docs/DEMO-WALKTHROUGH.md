@@ -37,7 +37,7 @@ What to expect:
 
 - `index build` indexes 10 files. `index search --query harbor` finds the two reports and the meeting notes.
 - `index duplicates` shows one exact group: the two `q3-revenue-summary` reports.
-- `rename preview` on `Screenshots` proposes new names (for example `2026-10-28_Screenshot_2026.png`) for the three screenshots and saves them as the move plan. Nothing moves yet. The demo screenshots have different dates on purpose: two screenshots from the same day currently get the same proposed name, and the second is skipped.
+- `rename preview` on `Screenshots` proposes new names (for example `2026-10-28_Screenshot_2026.png`) for the three screenshots and saves them as the move plan. Nothing moves yet.
 - `plan apply --yes` moves them; `plan undo --yes` puts every one back. Nothing is ever deleted.
 
 Studio, with the same folders:

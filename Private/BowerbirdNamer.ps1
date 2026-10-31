@@ -22,7 +22,8 @@ function New-BowerbirdFileName {
     if ($reserved -contains $base.ToUpperInvariant()) { $base = "File_$base" }
     if ($base.Length -gt 120) { $base = $base.Substring(0, 120).TrimEnd('_-') }
     $final = "$base$ext"; $dir = $File.DirectoryName; $counter = 1
-    while ($ExistingNames -contains $final.ToLowerInvariant() -or (Test-Path -LiteralPath (Join-Path $dir $final))) {
+    # ExistingNames holds bare lower-case names (Invoke-BowerbirdOrganize) or lower-case full paths (the smart rename plan).
+    while ($ExistingNames -contains $final.ToLowerInvariant() -or $ExistingNames -contains (Join-Path $dir $final).ToLowerInvariant() -or (Test-Path -LiteralPath (Join-Path $dir $final))) {
         $final = "{0}_{1:D2}{2}" -f $base, $counter, $ext
         $counter++
         if ($counter -gt 999) { break }
