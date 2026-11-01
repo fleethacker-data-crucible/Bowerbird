@@ -140,9 +140,10 @@ try{
    [IO.File]::AppendAllText($script:LogFile,$line+[Environment]::NewLine,[Text.Encoding]::UTF8)
   }catch{}
  }
- foreach($module in @('BowerbirdIntelligence','BowerbirdAdvanced','BowerbirdStreaming','Get-ImageMetadata','BowerbirdPass1','BowerbirdPass2','BowerbirdNamer','BowerbirdRenameStudio','BowerbirdSidecarRename','BowerbirdSemaphoreExport','BowerbirdActions','BowerbirdLlm','LazaretteBridge','BowerbirdWorkspace','BowerbirdSupport','BowerbirdApi')){
+ foreach($module in @('BowerbirdIntelligence','BowerbirdAdvanced','BowerbirdStreaming','Get-ImageMetadata','BowerbirdPass1','BowerbirdPass2','BowerbirdNamer','BowerbirdRenameStudio','BowerbirdSidecarRename','BowerbirdSemaphoreExport','BowerbirdActions','BowerbirdLlm','BowerbirdWorkspace','BowerbirdSupport','BowerbirdApi')){
   . (Join-Path $AppRoot ('Private\'+$module+'.ps1'))
  }
+ if($AllowCloudAI){$env:BOWERBIRD_FAIRLEAD_PRIVACY='any'}   # Fairlead may then use cloud models for this run
  if([string]::IsNullOrWhiteSpace($root)){
   $candidates=New-Object Collections.Generic.List[string]
   if($env:USERPROFILE){$candidates.Add((Join-Path $env:USERPROFILE 'Pictures'));$candidates.Add((Join-Path $env:USERPROFILE 'Documents'));$candidates.Add($env:USERPROFILE)}
