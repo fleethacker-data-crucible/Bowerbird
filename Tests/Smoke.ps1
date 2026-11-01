@@ -32,7 +32,7 @@ try{
  Assert ($restored.Count -eq 3) 'Undo count'
  Assert ((Get-ChildItem $source -File).Count -eq 3) 'Restored files'
  Write-Host 'PASS: Bowerbird intelligence, duplicate, search, plan, apply and undo smoke test' -ForegroundColor Green
- # Lazarette item names: Bowerbird's current override first, then its former names, then Halyard's names.
+ # Lazarette item names: the override variable if set, else the default item.
  . (Join-Path $root 'Private\LazaretteBridge.ps1')
  . (Join-Path $root 'Private\BowerbirdLlm.ps1')
  $spec=$script:BowerbirdLlmVaultItems.AiEndpoint
@@ -44,33 +44,26 @@ try{
   function Get-BowerbirdLazaretteSecretByName {param([string]$ServiceName);return ('secret-for-'+$ServiceName)}
   $cases=@(
    @{Set=@{};Want=$spec.Name},
-   @{Set=@{$keys[6]='c-llm'};Want='c-llm'},
-   @{Set=@{$keys[5]='c-gen';$keys[4]='h-llm'};Want='h-llm'},
-   @{Set=@{$keys[3]='h-gen';$keys[2]='b-arc'};Want='b-arc'},
-   @{Set=@{$keys[2]='b-arc';$keys[1]='b-old'};Want='b-old'},
-   @{Set=@{$keys[1]='b-old';$keys[0]='b-laz'};Want='b-laz'}
+   @{Set=@{$keys[0]='b-laz'};Want='b-laz'}
   )
   foreach($case in $cases){
    foreach($n in $keys){[Environment]::SetEnvironmentVariable($n,$null)}
    foreach($k in $case.Set.Keys){[Environment]::SetEnvironmentVariable($k,$case.Set[$k])}
-   foreach($p in @('AiEndpoint')+@($script:BowerbirdLlmProfileAliases.Keys)){
-    $got=Get-BowerbirdLlmToken -ForProfile $p
-    Assert ($got -eq ('secret-for-'+$case.Want)) ("Lazarette item order ($p): expected $($case.Want), got $got")
-    foreach($n in @($script:BowerbirdLlmTokenEnv.AiEndpoint)){[Environment]::SetEnvironmentVariable($n,$null)}
-   }
+   $got=Get-BowerbirdLlmToken -ForProfile AiEndpoint
+   Assert ($got -eq ('secret-for-'+$case.Want)) ("Lazarette item order: expected $($case.Want), got $got")
+   foreach($n in @($script:BowerbirdLlmTokenEnv.AiEndpoint)){[Environment]::SetEnvironmentVariable($n,$null)}
   }
   foreach($n in $keys){[Environment]::SetEnvironmentVariable($n,$null)}
-  # A vault that only holds the former item name still works.
-  function Get-BowerbirdLazaretteSecretByName {param([string]$ServiceName);if(@($spec.Legacy) -contains $ServiceName){return 'old-item-secret'};return $null}
-  Assert ((Get-BowerbirdLlmToken -ForProfile AiEndpoint) -eq 'old-item-secret') 'Former vault item name still read'
-  foreach($n in @($script:BowerbirdLlmTokenEnv.AiEndpoint)){[Environment]::SetEnvironmentVariable($n,$null)}
-  # Token variables: current name preferred, former name still read.
-  [Environment]::SetEnvironmentVariable(@($script:BowerbirdLlmTokenEnv.AiEndpoint)[1],'old-token')
-  Assert ((Get-BowerbirdLlmToken -ForProfile AiEndpoint) -eq 'old-token') 'Former token variable still read'
+  # Only the current names exist: a vault holding just a differently named item is not read.
+  function Get-BowerbirdLazaretteSecretByName {param([string]$ServiceName);if($ServiceName -eq 'some-other-item'){return 'other-secret'};return $null}
+  $threw=$false;try{$null=Get-BowerbirdLlmToken -ForProfile AiEndpoint}catch{$threw=$true}
+  Assert $threw 'A differently named vault item is not read'
+  Assert (@($script:BowerbirdLlmTokenEnv.AiEndpoint).Count -eq 1 -and @($script:BowerbirdLlmTokenEnv.AiEndpoint)[0] -eq 'AI_ENDPOINT_TOKEN') 'One token variable per profile'
   $env:AI_ENDPOINT_TOKEN='new-token'
-  Assert ((Get-BowerbirdLlmToken -ForProfile AiEndpoint) -eq 'new-token') 'Current token variable preferred'
+  Assert ((Get-BowerbirdLlmToken -ForProfile AiEndpoint) -eq 'new-token') 'Current token variable read'
   # Profiles and endpoint configuration.
-  Assert ((ConvertTo-BowerbirdLlmProfile -Profile @($script:BowerbirdLlmProfileAliases.Keys)[0]) -eq 'AiEndpoint') 'Deprecated profile name maps to AiEndpoint'
+  $oldName='Gen'+'Ai';$threw=$false;try{$null=ConvertTo-BowerbirdLlmProfile -Profile $oldName}catch{$threw=$true}
+  Assert $threw 'The retired profile name is rejected'
   $threw=$false;try{$null=ConvertTo-BowerbirdLlmProfile -Profile 'Nope'}catch{$threw=$true}
   Assert $threw 'Unknown profile rejected'
   # Default: the local phoenix-lai API on loopback, with its loaded-model name; no token needed there.
@@ -92,7 +85,7 @@ try{
    Assert ($global:sentHeaders['Authorization'] -eq 'Bearer local-key') 'Optional token sent to the local endpoint when set'
    $env:LLM_TOKEN=$null
   }finally{Remove-Item Function:\Invoke-RestMethod -ErrorAction SilentlyContinue}
-  # Overrides: the profile variable replaces the default; LLM_URL (shared, legacy alias) wins over both.
+  # Overrides: the profile variable replaces the default; LLM_URL (shared) wins over both.
   $env:BOWERBIRD_AI_ENDPOINT_URL='https://ai.example.org/v1/chat/completions/'
   $cfg=Get-BowerbirdLlmConfig -Profile AiEndpoint
   Assert ($cfg.Url -eq 'https://ai.example.org/v1/chat/completions' -and -not $cfg.DefaultUrl -and $cfg.Model -ne 'phoenixlai') 'BOWERBIRD_AI_ENDPOINT_URL overrides the default'
