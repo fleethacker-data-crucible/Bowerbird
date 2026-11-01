@@ -23,7 +23,7 @@ function Get-BowerbirdMimeType {
  }
 }
 function Invoke-BowerbirdPass2 {
- [CmdletBinding()]param([Parameter(Mandatory=$true)][System.IO.FileInfo]$File,[pscustomobject]$Pass1Result,[string]$Profile='Auto')
+ [CmdletBinding()]param([Parameter(Mandatory=$true)][System.IO.FileInfo]$File,[pscustomobject]$Pass1Result)
  $meta=$Pass1Result.Metadata;$b64=Get-BowerbirdImageBase64 -File $File
  if(-not $b64){
   return [pscustomobject]@{Confidence=$Pass1Result.Confidence;SuggestedName=$Pass1Result.SuggestedName;Reasoning=$Pass1Result.Reasoning+'; vision skipped (size or read failure)';Source='pass1-only';VisionText=$null;NeedsVision=$false}
@@ -43,7 +43,7 @@ Rules:
  if($Pass1Result.DatePart){$userText+='  Possible date: '+$Pass1Result.DatePart}
  $userContent=@(@{type='text';text=$userText},@{type='image_url';image_url=@{url=$dataUrl}})
  $messages=@(@{role='system';content=$systemPrompt},@{role='user';content=$userContent})
- try{$resp=Invoke-BowerbirdChat -Messages $messages -Profile $Profile -MaxTokens 400 -Temperature 0.1;$raw=$resp.Text}
+ try{$resp=Invoke-BowerbirdChat -Messages $messages -MaxTokens 400 -Temperature 0.1;$raw=$resp.Text}
  catch{
   Write-Warning ("Vision call failed for {0}: {1}" -f $File.Name,$_.Exception.Message)
   return [pscustomobject]@{Confidence=$Pass1Result.Confidence;SuggestedName=$Pass1Result.SuggestedName;Reasoning=$Pass1Result.Reasoning+'; vision error: '+$_.Exception.Message;Source='pass1-fallback';VisionText=$null;NeedsVision=$false}

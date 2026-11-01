@@ -1,5 +1,5 @@
 #requires -Version 5.1
-# Optional direct SSE bridge to approved OpenAI-compatible endpoints.
+# Optional SSE bridge to Fairlead's OpenAI-compatible chat address.
 function Write-BowerbirdSse {
  [CmdletBinding()]param([Parameter(Mandatory)]$Response,[Parameter(Mandatory)][string]$Event,[Parameter(Mandatory)]$Value)
  $json=ConvertTo-Json -InputObject $Value -Depth 8 -Compress
@@ -12,20 +12,19 @@ function Invoke-BowerbirdStreamingChat {
  [CmdletBinding()]param(
   [Parameter(Mandatory)]$Response,
   [Parameter(Mandatory)][object[]]$Messages,
-  [string]$Profile='Auto',
   [ValidateRange(32,8192)][int]$MaxTokens=1400,
   [ValidateRange(5,300)][int]$TimeoutSeconds=120
  )
- $cfg=Get-BowerbirdLlmConfig -Profile $Profile
+ $cfg=Get-BowerbirdLlmConfig
  Assert-BowerbirdLlmUrl -Config $cfg
- $token=Get-BowerbirdLlmAuthToken -Config $cfg
+ $headers=Get-BowerbirdLlmHeaders -Config $cfg
  $payload=[ordered]@{model=$cfg.Model;messages=$Messages;max_tokens=$MaxTokens;temperature=0.2;stream=$true}
  $bytes=[Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject $payload -Depth 12))
  $request=[Net.HttpWebRequest][Net.WebRequest]::Create($cfg.Url)
  $request.Method='POST';$request.ContentType='application/json; charset=utf-8'
  $request.Accept='text/event-stream,application/json'
  $request.Timeout=$TimeoutSeconds*1000;$request.ReadWriteTimeout=$TimeoutSeconds*1000
- if($token){$request.Headers['Authorization']='Bearer '+$token}   # none for a local endpoint without a token
+ foreach($name in $headers.Keys){$request.Headers[$name]=[string]$headers[$name]}
  $request.ContentLength=$bytes.Length
  $remote=$null;$responseReader=$null
  try{
@@ -35,7 +34,7 @@ function Invoke-BowerbirdStreamingChat {
   if($remote.StatusCode -ne [Net.HttpStatusCode]::OK){throw "Provider HTTP $([int]$remote.StatusCode)"}
   $responseReader=New-Object IO.StreamReader($remote.GetResponseStream())
   $received=0
-  Write-BowerbirdSse -Response $Response -Event 'start' -Value @{model=$cfg.Model;profile=$cfg.Profile}
+  Write-BowerbirdSse -Response $Response -Event 'start' -Value @{model=$cfg.Model}
   $type=([string]$remote.ContentType).ToLowerInvariant()
   if($type -notlike '*text/event-stream*'){
    $parsed=$responseReader.ReadToEnd()|ConvertFrom-Json

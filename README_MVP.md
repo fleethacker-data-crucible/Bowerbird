@@ -13,11 +13,11 @@ Run from Windows PowerShell 5.1:
 .\Start-BowerbirdMVP.ps1 -Undo
 ```
 
-Use `Start-Bowerbird.bat` or `Start-Bowerbird-Console.bat` as launch alternatives when allowed by organizational policy. Review `Config/bowerbird.env.example` for provider configuration; prefer credentials managed by Lazarette rather than placing secrets in files.
+Use `Start-Bowerbird.bat` or `Start-Bowerbird-Console.bat` as launch alternatives when allowed by organizational policy. Review `Config/bowerbird.env.example` for the optional Fairlead settings. AI needs Fairlead running with a key installed for Bowerbird; no secrets go in files.
 
 ## How it works
 
-Pass 1 analyzes filename patterns, timestamps, and image metadata without transmitting content. Pass 2 optionally submits an image to a configured AI endpoint or Grok multimodal endpoint if the local result needs improvement. The resulting name is sanitized and made collision-resistant.
+Pass 1 analyzes filename patterns, timestamps, and image metadata without transmitting content. Pass 2 optionally submits an image to Fairlead (the Fleet model router on this PC) if the local result needs improvement. The resulting name is sanitized and made collision-resistant.
 
 Renaming defaults to preview / WhatIf. The tool writes JSON audit entries and supports reversing applied renames through the audit log.
 

@@ -70,7 +70,7 @@ try{
  Assert (-not (Get-BowerbirdAutoStopSetting -ConfigPath $cfg -EnvironmentValue '0')) 'BOWERBIRD_AUTO_STOP=0 env var'
  Assert (-not (Get-BowerbirdAutoStopSetting -ConfigPath $cfg -EnvironmentValue 'false')) 'BOWERBIRD_AUTO_STOP=false env var'
  Assert (Get-BowerbirdAutoStopSetting -ConfigPath $cfg -EnvironmentValue '1') 'BOWERBIRD_AUTO_STOP=1 env var'
- [IO.File]::WriteAllText($cfg,"# comment`r`nBOWERBIRD_LLM_PROFILE=Auto`r`nBOWERBIRD_AUTO_STOP=0`r`n")
+ [IO.File]::WriteAllText($cfg,"# comment`r`nBOWERBIRD_AUTO_STOP=0`r`n")
  Assert (-not (Get-BowerbirdAutoStopSetting -ConfigPath $cfg -EnvironmentValue '')) 'BOWERBIRD_AUTO_STOP=0 in Config\bowerbird.env'
  Assert (Get-BowerbirdAutoStopSetting -ConfigPath $cfg -EnvironmentValue '1') 'Environment variable wins over the env file'
  [IO.File]::WriteAllText($cfg,"# BOWERBIRD_AUTO_STOP=0`r`n")

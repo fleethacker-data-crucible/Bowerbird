@@ -1,55 +1,80 @@
-# Bowerbird AI endpoint / Grok multimodal client
+# Bowerbird AI client: every call goes to Fairlead, the Fleet model router on this PC.
 #requires -Version 5.1
-# AiEndpoint defaults to the local phoenix-lai server's OpenAI-compatible API on this PC (loopback only).
-# BOWERBIRD_AI_ENDPOINT_URL overrides it, and LLM_URL overrides every profile. Grok is an outside provider
-# with no built-in URL: set BOWERBIRD_GROK_URL (or LLM_URL) in Config\bowerbird.env. No other host is built in.
+# Fairlead owns the endpoint choice, the provider keys and the fallbacks. Bowerbird sends a route name and
+# its own Fairlead client key, and nothing else about where the model lives.
+#   BOWERBIRD_FAIRLEAD_URL      Fairlead's chat address (loopback only); default http://127.0.0.1:8776/v1/chat/completions
+#   BOWERBIRD_FAIRLEAD_MODEL    the Fairlead route name to ask for; default auto
+#   BOWERBIRD_FAIRLEAD_PRIVACY  local (default) keeps prompts on local models; any lets Fairlead use cloud models.
+#                               Launching with -AllowCloudAI sets it to any for that run.
+# The client key is read only from Windows Credential Manager, generic credential Fairlead/Bowerbird, which
+# Fairlead writes ("Install for this app"). There is no environment variable and no vault item for it.
 $script:BowerbirdLlmDefaults=@{
- GrokUrlEnv='BOWERBIRD_GROK_URL'
- GrokModel='system.ai.grok-4-6'
- AiEndpointUrlEnv='BOWERBIRD_AI_ENDPOINT_URL'
- AiEndpointUrl='http://127.0.0.1:1234/v1/chat/completions'   # local phoenix-lai
- AiEndpointModel='gemini-3.8-flash'
- LocalDefaultModel='phoenixlai'   # phoenix-lai's name for "the model it has loaded"
+ UrlEnv='BOWERBIRD_FAIRLEAD_URL'
+ Url='http://127.0.0.1:8776/v1/chat/completions'
+ ModelEnv='BOWERBIRD_FAIRLEAD_MODEL'
+ Model='auto'
+ PrivacyEnv='BOWERBIRD_FAIRLEAD_PRIVACY'
+ AppName='Bowerbird'
 }
-# Profiles are Auto | AiEndpoint | Grok.
-# Token variables per profile.
-$script:BowerbirdLlmTokenEnv=@{AiEndpoint=@('AI_ENDPOINT_TOKEN');Grok=@('DATABRICKS_TOKEN')}
-# Lazarette vault items. Name is the item read by default; EnvKeys name the variable that overrides the item name.
-$script:BowerbirdLlmVaultItems=@{
- AiEndpoint=@{Name='ai-endpoint-api';EnvKeys=@('BOWERBIRD_LAZARETTE_ITEM_AiEndpoint')}
- Grok=@{Name='grok-api';EnvKeys=@('BOWERBIRD_LAZARETTE_ITEM_Grok')}
+$script:BowerbirdCredentialTarget='Fairlead/Bowerbird'
+# Returns the stored credential's text, or $null when there is none. Replaceable so tests never read the real store.
+$script:BowerbirdCredentialReader={param([string]$Target) Read-BowerbirdWindowsCredential -Target $Target}
+
+function Initialize-BowerbirdCredentialType {
+ if('Bowerbird.WinCredential' -as [type]){return}
+ Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+namespace Bowerbird {
+ public static class WinCredential {
+  [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)]
+  private struct CREDENTIAL {
+   public int Flags; public int Type; public string TargetName; public string Comment;
+   public System.Runtime.InteropServices.ComTypes.FILETIME LastWritten;
+   public int CredentialBlobSize; public IntPtr CredentialBlob; public int Persist;
+   public int AttributeCount; public IntPtr Attributes; public string TargetAlias; public string UserName;
+  }
+  [DllImport("advapi32.dll", EntryPoint="CredReadW", CharSet=CharSet.Unicode, SetLastError=true)]
+  private static extern bool CredRead(string target, int type, int flags, out IntPtr credential);
+  [DllImport("advapi32.dll")] private static extern void CredFree(IntPtr buffer);
+  public static byte[] Read(string target) {
+   IntPtr p;
+   if (!CredRead(target, 1, 0, out p)) return null;
+   try {
+    CREDENTIAL c = (CREDENTIAL)Marshal.PtrToStructure(p, typeof(CREDENTIAL));
+    byte[] b = new byte[c.CredentialBlobSize];
+    if (c.CredentialBlobSize > 0) Marshal.Copy(c.CredentialBlob, b, 0, c.CredentialBlobSize);
+    return b;
+   } finally { CredFree(p); }
+  }
+ }
 }
-function ConvertTo-BowerbirdLlmProfile {
- [CmdletBinding()]param([string]$Profile='Auto')
- if([string]::IsNullOrWhiteSpace($Profile)){return 'Auto'}
- $p=$Profile.Trim()
- foreach($known in @('Auto','AiEndpoint','Grok')){if($p -eq $known){return $known}}
- throw "Unknown LLM profile '$Profile'. Use Auto, AiEndpoint or Grok."
+'@
 }
-function Get-BowerbirdLlmEnvToken {
- param([string]$ForProfile)
- foreach($n in @($script:BowerbirdLlmTokenEnv[$ForProfile])){
-  $v=[Environment]::GetEnvironmentVariable($n);if(-not [string]::IsNullOrWhiteSpace($v)){return $v.Trim()}
+function ConvertFrom-BowerbirdCredentialBytes {
+ # Fairlead stores the key as UTF-16 text; a key saved another way may be UTF-8. Take the first reading that is
+ # printable ASCII after trimming.
+ param([byte[]]$Bytes)
+ if($null -eq $Bytes -or $Bytes.Length -eq 0){return $null}
+ foreach($enc in @([Text.Encoding]::Unicode,[Text.Encoding]::UTF8)){
+  $t=$enc.GetString($Bytes).Trim([char]0).Trim()
+  if($t -match '^[\x21-\x7E]+$'){return $t}
  }
  return $null
 }
-function Get-BowerbirdLlmConfig {
- [CmdletBinding()]param([string]$Profile='Auto')
- $Profile=ConvertTo-BowerbirdLlmProfile -Profile $Profile
- $url=$env:LLM_URL;$model=$env:LLM_MODEL;$resolved=$Profile
- if($Profile -eq 'Auto'){
-  if($url -match 'serving-endpoints'){$resolved='Grok'}
-  elseif((Get-BowerbirdLlmEnvToken -ForProfile Grok) -and -not (Get-BowerbirdLlmEnvToken -ForProfile AiEndpoint)){$resolved='Grok'}
-  else{$resolved='AiEndpoint'}
- }
- if([string]::IsNullOrWhiteSpace($url)){$url=[Environment]::GetEnvironmentVariable($script:BowerbirdLlmDefaults[$resolved+'UrlEnv'])}
- $isDefault=$false
- if([string]::IsNullOrWhiteSpace($url) -and $resolved -eq 'AiEndpoint'){$url=$script:BowerbirdLlmDefaults.AiEndpointUrl;$isDefault=$true}
- if([string]::IsNullOrWhiteSpace($model)){
-  if($isDefault){$model=$script:BowerbirdLlmDefaults.LocalDefaultModel}else{$model=$script:BowerbirdLlmDefaults[$resolved+'Model']}
- }
- if($null -eq $url){$url=''}
- return [pscustomobject]@{Profile=$resolved;Url=$url.Trim().TrimEnd('/');Model=$model;DefaultUrl=$isDefault}
+function Read-BowerbirdWindowsCredential {
+ param([Parameter(Mandatory)][string]$Target)
+ if($env:OS -ne 'Windows_NT'){return $null}
+ Initialize-BowerbirdCredentialType
+ return (ConvertFrom-BowerbirdCredentialBytes -Bytes ([Bowerbird.WinCredential]::Read($Target)))
+}
+function Get-BowerbirdFairleadKey {
+ $key=& $script:BowerbirdCredentialReader $script:BowerbirdCredentialTarget
+ $key=([string]$key).Trim()
+ if($key -match '^(?i)Bearer\s+(.+)$'){$key=$Matches[1].Trim()}
+ $key=($key -replace '[\r\n]','').Trim().Trim("'").Trim('"').Trim()
+ if([string]::IsNullOrWhiteSpace($key)){throw 'Open Fairlead and install a key for Bowerbird.'}
+ return $key
 }
 function Test-BowerbirdLoopbackUrl {
  # True when the URL points at this PC (127.0.0.0/8, ::1 or localhost).
@@ -58,81 +83,45 @@ function Test-BowerbirdLoopbackUrl {
  if([string]::IsNullOrWhiteSpace($Url) -or -not [Uri]::TryCreate($Url.Trim(),[UriKind]::Absolute,[ref]$u)){return $false}
  return [bool]$u.IsLoopback
 }
+function Get-BowerbirdLlmConfig {
+ [CmdletBinding()]param()
+ $url=[Environment]::GetEnvironmentVariable($script:BowerbirdLlmDefaults.UrlEnv)
+ if([string]::IsNullOrWhiteSpace($url)){$url=$script:BowerbirdLlmDefaults.Url}
+ $model=[Environment]::GetEnvironmentVariable($script:BowerbirdLlmDefaults.ModelEnv)
+ if([string]::IsNullOrWhiteSpace($model)){$model=$script:BowerbirdLlmDefaults.Model}
+ $privacy=([string][Environment]::GetEnvironmentVariable($script:BowerbirdLlmDefaults.PrivacyEnv)).Trim().ToLowerInvariant()
+ if($privacy -ne 'any'){$privacy='local'}
+ return [pscustomobject]@{Url=$url.Trim().TrimEnd('/');Model=$model.Trim();Privacy=$privacy;Label=$script:BowerbirdLlmDefaults.AppName}
+}
 function Assert-BowerbirdLlmUrl {
  param($Config)
- if([string]::IsNullOrWhiteSpace($Config.Url)){
-  throw ("No endpoint URL configured for profile $($Config.Profile). Set $($script:BowerbirdLlmDefaults[$Config.Profile+'UrlEnv']) (or LLM_URL) in Config\bowerbird.env.")
+ if(-not (Test-BowerbirdLoopbackUrl -Url ([string]$Config.Url))){
+  throw ("Fairlead must be on this PC: set $($script:BowerbirdLlmDefaults.UrlEnv) to a 127.0.0.1 address (default $($script:BowerbirdLlmDefaults.Url)).")
  }
 }
-function Get-BowerbirdLlmToken {
- [CmdletBinding()]param([string]$ForProfile='Auto',[switch]$AllowPrompt)
- $ForProfile=ConvertTo-BowerbirdLlmProfile -Profile $ForProfile
- if($ForProfile -eq 'Auto'){$ForProfile=(Get-BowerbirdLlmConfig).Profile}
- $spec=$script:BowerbirdLlmVaultItems[$ForProfile]
- $envTarget=@($script:BowerbirdLlmTokenEnv[$ForProfile])[0]
- $existing=Get-BowerbirdLlmEnvToken -ForProfile $ForProfile;if($existing){return $existing}
- if(-not [string]::IsNullOrWhiteSpace($env:LLM_TOKEN)){return $env:LLM_TOKEN.Trim()}
- # Vault item name: the override from EnvKeys, else the default item.
- $candidates=@()
- foreach($k in $spec.EnvKeys){$v=[Environment]::GetEnvironmentVariable($k);if(-not [string]::IsNullOrWhiteSpace($v)){$candidates=@($v.Trim());break}}
- if($candidates.Count -eq 0){$candidates=@($spec.Name)}
- if(Get-Command Import-BowerbirdLazaretteSession -ErrorAction SilentlyContinue){$null=Import-BowerbirdLazaretteSession -Quiet}
- if(Get-Command Get-BowerbirdLazaretteSecretByName -ErrorAction SilentlyContinue){
-  foreach($lazaretteItem in $candidates){
-   try{$got=Get-BowerbirdLazaretteSecretByName -ServiceName $lazaretteItem;if(-not [string]::IsNullOrWhiteSpace($got)){$plain=[string]$got.Trim();Set-Item -Path "Env:$envTarget" -Value $plain;return $plain}}catch{Write-Verbose $_.Exception.Message}
-  }
- }
- if($AllowPrompt -and [Environment]::UserInteractive){
-  $secure=Read-Host 'Token' -AsSecureString
-  if($null -eq $secure){throw 'No token provided.'}
-  $bstr=[Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
-  try{$plain=[Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr);if($plain){Set-Item -Path "Env:$envTarget" -Value $plain.Trim();return $plain.Trim()}}
-  finally{[Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)}
- }
- throw "No LLM token for profile $ForProfile. Configure Lazarette or $envTarget."
-}
-function Get-BowerbirdLlmAuthToken {
- # The sanitized token for a resolved configuration, or $null when none is needed. Remote endpoints need one
- # (Get-BowerbirdLlmToken). A loopback endpoint such as the local phoenix-lai server has its API key off by
- # default: a profile or LLM_TOKEN value is used when set, the vault is not opened, and no header is sent without one.
+function Get-BowerbirdLlmHeaders {
+ # The headers every Fairlead call carries. The key is read for this call and not kept.
  param([Parameter(Mandatory)]$Config)
- if(Test-BowerbirdLoopbackUrl -Url ([string]$Config.Url)){
-  $token=Get-BowerbirdLlmEnvToken -ForProfile $Config.Profile
-  if(-not $token -and -not [string]::IsNullOrWhiteSpace($env:LLM_TOKEN)){$token=$env:LLM_TOKEN}
-  if(-not $token){return $null}
- }else{$token=Get-BowerbirdLlmToken -ForProfile $Config.Profile}
- $token=([string]$token).Trim().Trim("'").Trim('"')
- if($token -match '^(?i)Bearer\s+(.+)$'){$token=$Matches[1].Trim()}
- $token=($token -replace '[\r\n]','').Trim()
- if(-not $token){
-  if(Test-BowerbirdLoopbackUrl -Url ([string]$Config.Url)){return $null}
-  throw 'LLM token empty after sanitization'
- }
- return $token
+ return @{Authorization=('Bearer '+(Get-BowerbirdFairleadKey));'X-Fairlead-Label'=$Config.Label;'X-Fairlead-Privacy'=$Config.Privacy}
 }
 function Invoke-BowerbirdChat {
- [CmdletBinding()]param([Parameter(Mandatory)][object[]]$Messages,[string]$Profile='Auto',[string]$Model,[int]$MaxTokens=1024,[double]$Temperature=0.15,[int]$TimeoutSec=180)
- $cfg=Get-BowerbirdLlmConfig -Profile $Profile
+ [CmdletBinding()]param([Parameter(Mandatory)][object[]]$Messages,[string]$Model,[int]$MaxTokens=1024,[double]$Temperature=0.15,[int]$TimeoutSec=180)
+ $cfg=Get-BowerbirdLlmConfig
  Assert-BowerbirdLlmUrl -Config $cfg
  if($Model){$cfg.Model=$Model}
- $token=Get-BowerbirdLlmAuthToken -Config $cfg
+ $headers=Get-BowerbirdLlmHeaders -Config $cfg
+ $headers['Accept']='application/json'
  $msgList=@()
  foreach($m in $Messages){
   $role=if($m -is [hashtable]){[string]$m['role']}else{[string]$m.role}
   $content=if($m -is [hashtable]){$m['content']}else{$m.content}
   $msgList+=@{role=$role;content=$content}
  }
- $payload=[ordered]@{messages=$msgList;max_tokens=$MaxTokens;model=$cfg.Model;temperature=$Temperature}
- if($cfg.Profile -ne 'Grok' -and $cfg.Url -notmatch 'serving-endpoints'){$payload.stream=$false}
+ $payload=[ordered]@{messages=$msgList;max_tokens=$MaxTokens;model=$cfg.Model;temperature=$Temperature;stream=$false}
  $bytes=[Text.Encoding]::UTF8.GetBytes(($payload|ConvertTo-Json -Depth 12))
- try{[Net.ServicePointManager]::SecurityProtocol=[Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12}catch{}
- # No Authorization header at all when a local endpoint has no token (never an empty "Bearer ").
- $headers=@{Accept='application/json'};if($token){$headers['Authorization']='Bearer '+$token}
  $resp=Invoke-RestMethod -Uri $cfg.Url -Method Post -Headers $headers -Body $bytes -ContentType 'application/json; charset=utf-8' -TimeoutSec $TimeoutSec
  $text=$null
  if($resp.choices -and $resp.choices[0].message.content){$text=[string]$resp.choices[0].message.content}
  elseif($resp.choices -and $resp.choices[0].text){$text=[string]$resp.choices[0].text}
- elseif($resp.candidates -and $resp.candidates[0].content.parts){$text=($resp.candidates[0].content.parts|ForEach-Object {$_.text}) -join ''}
- elseif($resp.content){$text=[string]$resp.content}
- return [pscustomobject]@{Profile=$cfg.Profile;Model=$cfg.Model;Raw=$resp;Text=$text}
+ return [pscustomobject]@{Model=$cfg.Model;Raw=$resp;Text=$text}
 }

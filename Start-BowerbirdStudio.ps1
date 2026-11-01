@@ -105,7 +105,6 @@ Write-BowerbirdDiagnostic -Event 'BOOT' -Message 'Starting Bowerbird Studio.'
 . (Join-Path $AppRoot 'Private\BowerbirdSemaphoreExport.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdActions.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdLlm.ps1')
-. (Join-Path $AppRoot 'Private\LazaretteBridge.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdLoopback.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdWorkspace.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdSupport.ps1')
@@ -174,6 +173,7 @@ if($Transport -in @('Auto','Tcp')){
 }
 $script:CurrentPort=$Port
 $script:CloudEnabled=[bool]$AllowCloudAI
+if($AllowCloudAI){$env:BOWERBIRD_FAIRLEAD_PRIVACY='any'}   # Fairlead may then use cloud models for this run
 Write-BowerbirdDiagnostic -Event 'BOUND' -Message ("Transport=$Transport Port=$Port")
 function Read-Body($Request){
  if($Request.ContentLength64 -gt 1048576){throw 'Request too large'}

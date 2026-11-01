@@ -132,7 +132,7 @@ If the GUI will not launch at all, run `Start-Bowerbird.bat diagnostics`. See [D
 | Journaling | Per-step durable journal, archive of previous runs, source hash preconditions and checked undo |
 | Insights | Category inventory, indexed bytes, duplicate groups, extraction failures |
 | Local Agents | Read-only organization, duplication, and index-quality analysis; usable without cloud AI |
-| AI Chat | Optional Lazarette/AI endpoint/Grok integration, streamed browser output when provider supports SSE; fallback JSON responses |
+| AI Chat | Every model call goes to Fairlead on this PC, with Bowerbird's own Fairlead key; streamed browser output when the chosen model supports it; fallback JSON responses |
 | Code Insights | Language and line statistics by extension |
 | Diagnostics & Feedback | Halyard-style session recorder, automatic browser/API errors, local issue reporting and resolution, request IDs, health checks, redacted support export |
 | Tests | Windows PowerShell parser check, JavaScript/DOM contract tests, smoke and real localhost HTTP API tests on both transports |
@@ -142,31 +142,31 @@ If the GUI will not launch at all, run `Start-Bowerbird.bat diagnostics`. See [D
 - **PDF**: Browsing works through the browser's native PDF viewer. Local PDF text extraction is best-effort for uncompressed and FlateDecode text streams; this is **not** a full PDF parser.
 - **OCR**: If an approved `tesseract.exe` is already available on PATH, enable OCR when indexing. Nothing is auto-installed.
 - **AI vision**: The legacy CLI now requires `-AllowVision` and Studio requires both `-AllowCloudAI` and a separate explicit vision consent. No images are uploaded by ordinary indexing or local rename preview.
-- **Streaming**: The SSE bridge supports compatible providers; endpoints which decline streaming may return a complete JSON response. Model authentication still needs working approved credentials / Lazarette integration.
+- **Streaming**: The SSE bridge streams what Fairlead returns; a model that declines streaming may return a complete JSON response. AI needs Fairlead running with a key installed for Bowerbird.
 - **Index encryption**: DPAPI ties the saved index to the Windows user and PC that wrote it. Another user or PC cannot read it and has to rebuild. `BOWERBIRD_INDEX_ENCRYPTION=off` keeps plaintext JSON (for example to inspect it by hand). This protects the file at rest; the running Studio still holds the index in memory, and search results show text snippets.
 - **Incremental index**: a file counts as unchanged when its path, size and modified time match the saved index. A file edited in place with the same size and a restored timestamp would be missed; use `--full` (or the *Rebuild* option) when in doubt. Asking for content or OCR the previous run did not have re-reads every file.
 - **Agents**: The local agents are deterministic and read-only. They are not autonomous LLM tool-call agents.
 - **Search**: Related-file matching is lexical, not neural embeddings. There is no on-device LLM included.
 
-### AI endpoint configuration
+### AI through Fairlead
 
-> **Intelligence router:** these endpoints will move behind the Fleet intelligence router, [Fairlead](https://github.com/fleethacker-data-crucible/Fairlead), so Bowerbird defaults to the router (which picks local phoenix-lai or a remote provider) instead of a fixed endpoint. Until then the settings below stay as they are. See [TechStack](TechStack), "Intelligence router".
+Every model call (AI Chat and the second naming pass) goes to [Fairlead](https://github.com/fleethacker-data-crucible/Fairlead), the Fleet model router on this PC, at `http://127.0.0.1:8776/v1/chat/completions`. Fairlead owns the endpoints, provider keys and fallbacks; Bowerbird sends a route name and its own Fairlead key, and says who it is with `X-Fairlead-Label: Bowerbird`.
 
-AI Chat and the second naming pass default to the local phoenix-lai server's OpenAI-compatible API on this PC, `http://127.0.0.1:1234/v1/chat/completions`, with model `phoenixlai` (whichever model phoenix-lai has loaded). Set these in `Config\bowerbird.env` to change it:
+The key is read only from Windows Credential Manager, generic credential `Fairlead/Bowerbird`. In Fairlead, create a key for Bowerbird with **Install for this app**. If the credential is missing, AI calls stop with "Open Fairlead and install a key for Bowerbird." There is no environment variable or vault item for the key.
 
-| Variable | Profile | Default | Notes |
-| --- | --- | --- | --- |
-| `BOWERBIRD_AI_ENDPOINT_URL` | AiEndpoint | `http://127.0.0.1:1234/v1/chat/completions` (local phoenix-lai) | Full chat-completions URL. Overrides the default when set. |
-| `BOWERBIRD_GROK_URL` | Grok | none | Outside provider, so no URL is built in. Required for the Grok profile. |
-| `LLM_URL` | any | none | Shared override: wins over both variables above. |
-| `LLM_MODEL` | any | `phoenixlai` on the local default, otherwise the profile's model | Set it when an override URL needs a specific model name. |
-| `AI_ENDPOINT_TOKEN` / `LLM_TOKEN` | AiEndpoint / any | none | Optional for a local (loopback) endpoint: phoenix-lai's API key is off by default, and no `Authorization` header is sent without a token. Required for a remote endpoint, where Lazarette is also tried. |
+Optional settings in `Configowerbird.env`:
+
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `BOWERBIRD_FAIRLEAD_URL` | `http://127.0.0.1:8776/v1/chat/completions` | Fairlead's chat address. Must be on this PC (loopback); any other host is refused. |
+| `BOWERBIRD_FAIRLEAD_MODEL` | `auto` | The Fairlead route name to ask for. |
+| `BOWERBIRD_FAIRLEAD_PRIVACY` | `local` | `local` keeps prompts and images on local models (`X-Fairlead-Privacy: local`). `any` lets Fairlead use cloud models. Launching Studio or the CLI with `-AllowCloudAI` sets `any` for that run. |
 
 ## Recommended workflows
 
 **Explore and search**: Launch with a disposable or approved workspace, click *Build Index*, optionally enable content indexing, then use Search, Duplicates, or Insights & Agents.
 
-**Rename screenshots**: Open the target folder in Explorer, select *Smart Rename*, optionally enable approved AI vision, then *Generate Rename Proposals*. Review the confidence and destination of each proposal before entering `APPLY`.
+**Rename screenshots**: Open the target folder in Explorer, select *Smart Rename*, optionally enable AI vision, then *Generate Rename Proposals*. Review the confidence and destination of each proposal before entering `APPLY`.
 
 **Organize files**: Edit the JSON rules in *Organize*, generate a plan and inspect every proposed move. `APPLY` is required to modify files. The *Undo Last Apply* button checks source/destination and checksum preconditions before restoration.
 

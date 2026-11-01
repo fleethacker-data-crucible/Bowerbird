@@ -213,8 +213,8 @@ function Invoke-Api([string]$Route,$Body){
   '/api/ai' {
    if(-not $AllowCloudAI){throw 'Cloud AI disabled. Relaunch with -AllowCloudAI only for approved data/endpoints.'}
    $messages=Get-BowerbirdMessages $Body
-   $answer=Invoke-BowerbirdChat -Messages $messages -Profile Auto -MaxTokens 900
-   return @{text=$answer.Text;model=$answer.Model;profile=$answer.Profile}
+   $answer=Invoke-BowerbirdChat -Messages $messages -MaxTokens 900
+   return @{text=$answer.Text;model=$answer.Model}
   }
   '/api/commands' {return Get-BowerbirdCommandCatalog}
   default {throw 'Unknown endpoint'}

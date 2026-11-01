@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Bowerbird MVP - intelligent image / screenshot renamer (PowerShell + Lazarette + AI endpoint/Grok vision)
+  Bowerbird MVP - intelligent image / screenshot renamer (PowerShell + Fairlead vision)
 .DESCRIPTION
   Two-pass organizer: filename and metadata first, optional vision LLM second.
   Default is dry-run. Use -Apply to rename.
@@ -9,7 +9,6 @@
 [CmdletBinding(SupportsShouldProcess=$true)]
 param(
  [Parameter(Position=0)][string]$Path,
- [string]$Profile='Auto',   # Auto | AiEndpoint | Grok
  [double]$Pass1Threshold=0.65,[int]$MaxVision=25,[switch]$AllowVision,[switch]$Apply,[switch]$Recurse,[switch]$Undo,[string]$AuditLogPath
 )
 $Root=$PSScriptRoot;if(-not $Root){$Root=Get-Location}
@@ -46,9 +45,8 @@ try{
   }
   Write-Host 'Loaded Config\bowerbird.env' -ForegroundColor DarkGray
  }
- if($env:BOWERBIRD_LLM_PROFILE -and $Profile -eq 'Auto'){$Profile=$env:BOWERBIRD_LLM_PROFILE}
  $scripts=@(
-  'Private\LazaretteBridge.ps1','Private\BowerbirdLogging.ps1','Private\BowerbirdLlm.ps1',
+  'Private\BowerbirdLogging.ps1','Private\BowerbirdLlm.ps1',
   'Private\Get-ImageMetadata.ps1','Private\BowerbirdPass1.ps1','Private\BowerbirdPass2.ps1',
   'Private\BowerbirdNamer.ps1','Private\BowerbirdRenamer.ps1','Public\Invoke-BowerbirdOrganize.ps1'
  )
@@ -56,10 +54,8 @@ try{
   $fullPath=Join-Path $Root $script
   if(Test-Path $fullPath){. $fullPath}else{throw "Missing required script: $script"}
  }
- $Profile=ConvertTo-BowerbirdLlmProfile -Profile $Profile   # maps the deprecated profile name
- try{$null=Import-BowerbirdLazaretteSession -Quiet}catch{}
  Write-Host '';Write-Host '=== Bowerbird MVP ===' -ForegroundColor Cyan
- Write-Host 'Intelligent screenshot & image renamer (PowerShell + Lazarette + vision)' -ForegroundColor DarkGray
+ Write-Host 'Intelligent screenshot & image renamer (PowerShell + Fairlead + vision)' -ForegroundColor DarkGray
  if($Undo){
   if(-not $AuditLogPath){
    $latest=Get-ChildItem (Join-Path $Root 'Logs') -Filter 'bowerbird-audit_*.json' -ErrorAction SilentlyContinue|Sort-Object LastWriteTime -Descending|Select-Object -First 1
@@ -74,7 +70,7 @@ try{
   Write-Host '.\Start-BowerbirdMVP.ps1 -Path "D:\Screenshots" -Apply'
   Write-Host '.\Start-BowerbirdMVP.ps1 -Undo';return
  }
- $result=Invoke-BowerbirdOrganize -Path $Path -Profile $Profile -Pass1Threshold $Pass1Threshold -MaxVision $MaxVision -AllowVision:$AllowVision -Apply:$Apply -Recurse:$Recurse -Root $Root -WhatIf:(-not $Apply)
+ $result=Invoke-BowerbirdOrganize -Path $Path -Pass1Threshold $Pass1Threshold -MaxVision $MaxVision -AllowVision:$AllowVision -Apply:$Apply -Recurse:$Recurse -Root $Root -WhatIf:(-not $Apply)
  Write-BowerbirdLog -Level INFO -Message "Run complete. Applied=$($result.Applied) Vision=$($result.VisionUsed)" -Root $Root
 }catch{Write-CrashReport -Exception $_}
 finally{$ErrorActionPreference='Continue'}
