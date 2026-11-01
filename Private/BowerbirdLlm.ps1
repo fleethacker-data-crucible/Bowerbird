@@ -11,24 +11,18 @@ $script:BowerbirdLlmDefaults=@{
  AiEndpointModel='gemini-3.8-flash'
  LocalDefaultModel='phoenixlai'   # phoenix-lai's name for "the model it has loaded"
 }
-# Profiles are Auto | AiEndpoint | Grok. The former AI-endpoint profile name is a legacy alias (deprecated).
-$script:BowerbirdLlmProfileAliases=@{'GenAi'='AiEndpoint'}   # legacy alias
-# Token variables per profile, current name first; the second AiEndpoint entry is a legacy alias (deprecated).
-$script:BowerbirdLlmTokenEnv=@{AiEndpoint=@('AI_ENDPOINT_TOKEN','GENAI_TOKEN');Grok=@('DATABRICKS_TOKEN')}   # legacy alias
-# Lazarette vault items. Name is canonical; Legacy names (deprecated) are tried when the canonical item is missing.
-# EnvKeys override the item name: Bowerbird's current name, then its former names (legacy alias), then Halyard's
-# shared HALYARD_LAZARETTE_ITEM_* and the names Halyard used under its previous name (legacy alias).
+# Profiles are Auto | AiEndpoint | Grok.
+# Token variables per profile.
+$script:BowerbirdLlmTokenEnv=@{AiEndpoint=@('AI_ENDPOINT_TOKEN');Grok=@('DATABRICKS_TOKEN')}
+# Lazarette vault items. Name is the item read by default; EnvKeys name the variable that overrides the item name.
 $script:BowerbirdLlmVaultItems=@{
- AiEndpoint=@{Name='ai-endpoint-api';Legacy=@('genapi')   # legacy alias
-  EnvKeys=@('BOWERBIRD_LAZARETTE_ITEM_AiEndpoint','BOWERBIRD_LAZARETTE_ITEM_GenAi','BOWERBIRD_ARC_ITEM_GenAi','HALYARD_LAZARETTE_ITEM_GenAi','HALYARD_LAZARETTE_ITEM_Llm','CASCADE_ARC_ITEM_GenAi','CASCADE_ARC_ITEM_Llm')}   # legacy alias
- Grok=@{Name='grok-api';Legacy=@('advana-api')   # legacy alias
-  EnvKeys=@('BOWERBIRD_LAZARETTE_ITEM_Grok','BOWERBIRD_ARC_ITEM_Grok','HALYARD_LAZARETTE_ITEM_Grok','CASCADE_ARC_ITEM_Grok')}   # legacy alias
+ AiEndpoint=@{Name='ai-endpoint-api';EnvKeys=@('BOWERBIRD_LAZARETTE_ITEM_AiEndpoint')}
+ Grok=@{Name='grok-api';EnvKeys=@('BOWERBIRD_LAZARETTE_ITEM_Grok')}
 }
 function ConvertTo-BowerbirdLlmProfile {
  [CmdletBinding()]param([string]$Profile='Auto')
  if([string]::IsNullOrWhiteSpace($Profile)){return 'Auto'}
  $p=$Profile.Trim()
- foreach($k in $script:BowerbirdLlmProfileAliases.Keys){if($p -eq $k){return $script:BowerbirdLlmProfileAliases[$k]}}
  foreach($known in @('Auto','AiEndpoint','Grok')){if($p -eq $known){return $known}}
  throw "Unknown LLM profile '$Profile'. Use Auto, AiEndpoint or Grok."
 }
@@ -78,10 +72,10 @@ function Get-BowerbirdLlmToken {
  $envTarget=@($script:BowerbirdLlmTokenEnv[$ForProfile])[0]
  $existing=Get-BowerbirdLlmEnvToken -ForProfile $ForProfile;if($existing){return $existing}
  if(-not [string]::IsNullOrWhiteSpace($env:LLM_TOKEN)){return $env:LLM_TOKEN.Trim()}
- # Vault item name: an override from EnvKeys (in order), else the canonical item and then its former names.
+ # Vault item name: the override from EnvKeys, else the default item.
  $candidates=@()
  foreach($k in $spec.EnvKeys){$v=[Environment]::GetEnvironmentVariable($k);if(-not [string]::IsNullOrWhiteSpace($v)){$candidates=@($v.Trim());break}}
- if($candidates.Count -eq 0){$candidates=@($spec.Name)+@($spec.Legacy)}
+ if($candidates.Count -eq 0){$candidates=@($spec.Name)}
  if(Get-Command Import-BowerbirdLazaretteSession -ErrorAction SilentlyContinue){$null=Import-BowerbirdLazaretteSession -Quiet}
  if(Get-Command Get-BowerbirdLazaretteSecretByName -ErrorAction SilentlyContinue){
   foreach($lazaretteItem in $candidates){

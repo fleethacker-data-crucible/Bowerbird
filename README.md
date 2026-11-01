@@ -158,7 +158,7 @@ AI Chat and the second naming pass default to the local phoenix-lai server's Ope
 | --- | --- | --- | --- |
 | `BOWERBIRD_AI_ENDPOINT_URL` | AiEndpoint | `http://127.0.0.1:1234/v1/chat/completions` (local phoenix-lai) | Full chat-completions URL. Overrides the default when set. |
 | `BOWERBIRD_GROK_URL` | Grok | none | Outside provider, so no URL is built in. Required for the Grok profile. |
-| `LLM_URL` | any | none | Shared override (legacy alias): wins over both variables above. |
+| `LLM_URL` | any | none | Shared override: wins over both variables above. |
 | `LLM_MODEL` | any | `phoenixlai` on the local default, otherwise the profile's model | Set it when an override URL needs a specific model name. |
 | `AI_ENDPOINT_TOKEN` / `LLM_TOKEN` | AiEndpoint / any | none | Optional for a local (loopback) endpoint: phoenix-lai's API key is off by default, and no `Authorization` header is sent without a token. Required for a remote endpoint, where Lazarette is also tried. |
 
