@@ -44,6 +44,9 @@ assert.equal(blob,'04dfc953147be1124e7942371daa35f2ffccf236','Web/vendor/fleet/f
 assert(!/#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/.test(css),'style.css uses --fl-* tokens only, no raw colours');
 assert(!/\bInter\b/.test(css),'No Inter font');
 for(const id of ['theme-toggle','sidebar-toggle','shortcuts-open','shortcuts-dialog','engine','connection','bound-address','app-version'])assert(known.has(id),'Fleet shell control missing: '+id);
+for(const id of ['gate-dialog','gate-title','gate-body','gate-phrase','gate-ok','gate-cancel'])assert(known.has(id),'In-page approval gate control missing: '+id);
+assert(!/\bprompt\(/.test(js),'Typed approvals use the in-page gate, not the browser prompt');
+assert((js.match(/await gate\(/g)||[]).length>=4,'Rename and organize approvals must go through gate()');
 console.log('PASS: Bowerbird browser UI contract ('+known.size+' ids, '+required.length+' bound selectors)');
 // Lifecycle: the tab owns the server. Exercise Web/lifecycle.js against a fake browser.
 const lifecycleJs=fs.readFileSync(path.join(__dirname,'..','Web','lifecycle.js'),'utf8');

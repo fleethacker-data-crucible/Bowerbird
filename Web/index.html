@@ -181,6 +181,14 @@
   <span id="app-version" class="version">Bowerbird Studio 2.3</span>
  </footer>
 </div>
+<div id="gate-dialog" class="modal-backdrop" hidden>
+ <div class="modal fl-dialog" role="alertdialog" aria-modal="true" aria-labelledby="gate-title" aria-describedby="gate-body" tabindex="-1">
+  <header class="modal-head"><h2 id="gate-title">Confirm</h2></header>
+  <p id="gate-body" class="muted"></p>
+  <label id="gate-phrase-row" class="gate-phrase" hidden><span id="gate-phrase-label"></span><input id="gate-phrase" class="fl-input" autocomplete="off" spellcheck="false"></label>
+  <div class="gate-actions"><button type="button" id="gate-cancel" class="fl-btn">Cancel</button><button type="button" id="gate-ok" class="fl-btn fl-btn--primary">Continue</button></div>
+ </div>
+</div>
 <div id="shortcuts-dialog" class="modal-backdrop" hidden>
  <div class="modal fl-dialog" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title" tabindex="-1">
   <header class="modal-head"><h2 id="shortcuts-title">Keyboard shortcuts</h2><button type="button" class="icon-button fl-btn fl-btn--ghost" data-dialog-close title="Close (Esc)" aria-label="Close"><span data-icon="close"></span></button></header>
