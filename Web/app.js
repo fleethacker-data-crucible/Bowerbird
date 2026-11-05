@@ -1,3 +1,18 @@
+// In-page approval gate: replaces the browser's modal boxes so the question, and the phrase that must be typed, stay visible on screen.
+function gate({title,body,phrase,ok}){
+ return new Promise(resolve=>{
+  const d=$('gate-dialog'),input=$('gate-phrase'),okBtn=$('gate-ok'),cancel=$('gate-cancel'),opener=document.activeElement;
+  $('gate-title').textContent=title;$('gate-body').textContent=body;okBtn.textContent=ok||'Continue';
+  $('gate-phrase-row').hidden=!phrase;input.value='';
+  if(phrase)$('gate-phrase-label').textContent='Type '+phrase+' to continue';
+  const sync=()=>{okBtn.disabled=!!phrase&&input.value!==phrase};
+  const done=v=>{d.hidden=true;okBtn.removeEventListener('click',yes);cancel.removeEventListener('click',no);input.removeEventListener('input',sync);d.removeEventListener('keydown',key,true);if(opener&&opener.focus)opener.focus();resolve(v)};
+  const yes=()=>{if(!okBtn.disabled)done(true)},no=()=>done(false);
+  const key=e=>{if(e.key==='Escape'){e.stopPropagation();no()}else if(e.key==='Enter'&&e.target!==cancel){e.preventDefault();yes()}};
+  okBtn.addEventListener('click',yes);cancel.addEventListener('click',no);input.addEventListener('input',sync);d.addEventListener('keydown',key,true);
+  sync();d.hidden=false;(phrase?input:okBtn).focus();
+ });
+}
 'use strict';
 let storedToken=null;
 try{storedToken=sessionStorage.getItem('bowerbird-token')}catch(_){/* Managed browsers may disable session storage. */}
@@ -153,15 +168,13 @@ $('plan').addEventListener('click',async()=>{
 $('rules').addEventListener('input',()=>{$('apply').disabled=true;state.plan=null});$('destination').addEventListener('input',()=>{$('apply').disabled=true;state.plan=null});
 $('apply').addEventListener('click',async()=>{
  if(!state.plan||!state.plan.count)return;
- if(!confirm('Move '+state.plan.count+' files? Review the preview carefully. This changes files on disk.'))return;
- const phrase=prompt('Type APPLY to authorize the proposed moves:');if(phrase!=='APPLY')return;
+ if(!await gate({title:'Move '+state.plan.count+' files?',body:'Review the preview carefully. This changes files on disk. Nothing is deleted, and Undo Last Apply can put every file back.',phrase:'APPLY',ok:'Move files'}))return;const phrase='APPLY';
  const data=await run(()=>api('apply',{confirm:phrase,id:state.plan.id}),'Apply completed. Inspect results before further changes.');if(!data)return;
  $('apply').disabled=true;state.plan=null;const target=$('plan-results');clear(target);
  for(const r of data.results)addResult(target,r.Status,r.Source+' → '+r.Destination,r.Error||'');
 });
 $('undo').addEventListener('click',async()=>{
- if(!confirm('Attempt to restore files from the last journal? Existing destinations will not be overwritten.'))return;
- const phrase=prompt('Type UNDO to confirm:');if(phrase!=='UNDO')return;
+ if(!await gate({title:'Undo the last apply?',body:'Files are restored from the last journal. Existing destinations are never overwritten.',phrase:'UNDO',ok:'Undo'}))return;const phrase='UNDO';
  const data=await run(()=>api('undo',{confirm:phrase}),'Undo attempted. Review restored files.');if(data)notify('Undo returned '+(data.restored||[]).length+' restored entries.')
 });
 
@@ -169,7 +182,7 @@ $('rename-plan').addEventListener('click',async()=>{
  const useVision=$('rename-vision').checked;
  if(useVision){
   if(!state.status||!state.status.cloudAI){notify('Vision requires -AllowCloudAI and an approved AI provider.',true);return}
-  if(!confirm('This will send eligible image content to your configured AI service, up to the limit selected. Proceed only with approved images.'))return
+  if(!await gate({title:'Send images to the AI service?',body:'This will send eligible image content to your configured AI service, up to the limit selected. Proceed only with approved images.',ok:'Send images'}))return
  }
  const maxVision=Math.max(0,Math.min(25,Number($('rename-limit').value)||0));
  const data=await run(()=>api('rename-preview',{path:state.path,recurse:$('rename-recurse').checked,useVision,maxVision,consent:useVision?'VISION_UPLOAD':''}),'Rename proposals ready');
@@ -205,8 +218,7 @@ $('rename-vision').addEventListener('change',()=>{state.renamePlan=null;$('renam
 $('rename-limit').addEventListener('change',()=>{state.renamePlan=null;$('rename-apply').disabled=true});
 $('rename-apply').addEventListener('click',async()=>{
  const plan=state.renamePlan;if(!plan||!plan.count)return;
- if(!confirm('Rename '+plan.count+' files exactly as previewed?'))return;
- if(prompt('Type APPLY to authorize these renames:')!=='APPLY')return;
+ if(!await gate({title:'Rename '+plan.count+' files?',body:'Files are renamed exactly as previewed. Nothing is deleted, and Undo Last Apply can put every name back.',phrase:'APPLY',ok:'Rename files'}))return;
  const result=await run(()=>api('apply',{confirm:'APPLY',id:plan.id}),'Renames applied. Undo Last Apply in Organize can restore them.');
  if(!result)return;
  state.renamePlan=null;$('rename-apply').disabled=true;
