@@ -1,4 +1,4 @@
-# BOWERBIRD — local development (no smart card)
+# BOWERBIRD — local development
 
 Run `Launch-LocalDev.bat` from this repository on your **personal Windows PC** after checking out the feature branch. Do not use on a managed system to defeat organizational security policy.
 
@@ -20,4 +20,4 @@ git switch <feature-branch>
 
 The original production launcher and authentication checks remain unchanged. Mock, local, or offline sessions are **not** authenticated operational sessions, and must not contain sensitive or regulated data, real credentials, or production personal data.
 
-When stable, remove `Launch-LocalDev.bat` (and the Lazarette mock files where applicable) from the release branch. Do not deploy them as a means of avoiding smart card sign-in or authorization for live systems.
+When stable, remove `Launch-LocalDev.bat` from the release branch. Do not deploy it as a means of avoiding sign-in or authorization for live systems.
