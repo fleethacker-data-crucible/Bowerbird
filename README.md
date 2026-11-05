@@ -27,7 +27,7 @@ Studio follows the Windows light/dark setting; the theme button in the sidebar s
 
 **Double-click Start-Bowerbird.bat**. This is the supported GUI launcher, modeled on Lazarette/Halyard's PowerShell 5.1 -STA, -NoProfile, process-scoped execution settings and browser-native architecture. It opens **Bowerbird Studio**, not the old renamer.
 
-The second and only other BAT launcher is Start-Bowerbird-Console.bat for the original screenshot-renaming CLI.
+The only other BAT launcher for everyday use is Start-Bowerbird-Console.bat for the original screenshot-renaming CLI. (Launch-LocalDev.bat is a development-only launcher, see [LOCAL-DEV.md](LOCAL-DEV.md).)
 
 Start-Bowerbird-Console.bat also runs every Studio action as a named command for scripts and agents, such as `Start-Bowerbird-Console.bat index search --query invoice --json`. `commands --json` lists them all. See [docs/CLI.md](docs/CLI.md).
 
@@ -123,7 +123,7 @@ If the GUI will not launch at all, run `Start-Bowerbird.bat diagnostics`. See [D
 | --- | --- |
 | Explorer | Native GUI folder selection, manual full-path selection, folder navigation, metadata and safe previews |
 | Smart Rename | Screenshot/image analysis using metadata and filename patterns, optional AI vision, preview, consented apply, undo |
-| Smart Index | SHA-256, image dHash, categories, metadata, optional full-text and optional OCR. Re-indexing is incremental: files whose path, size and modified time are unchanged keep their saved hash and text (`--full` rebuilds everything) |
+| Smart Index | SHA-256, image dHash, categories, metadata, optional full-text and optional OCR. Re-indexing is incremental: files whose path, size and modified time are unchanged keep their saved hash and text (`index build --full` in the CLI rebuilds everything) |
 | Index storage | The index (which can hold extracted document text) is encrypted at rest with Windows DPAPI for the current user; no key file or password. Plaintext indexes from earlier versions still read |
 | Search | BM25-inspired token scoring with cached per-document frequencies, file name boost |
 | Related Files | Local Jaccard-style lexical similarity for discovering related indexed files |
@@ -144,7 +144,7 @@ If the GUI will not launch at all, run `Start-Bowerbird.bat diagnostics`. See [D
 - **AI vision**: The legacy CLI now requires `-AllowVision` and Studio requires both `-AllowCloudAI` and a separate explicit vision consent. No images are uploaded by ordinary indexing or local rename preview.
 - **Streaming**: The SSE bridge streams what Fairlead returns; a model that declines streaming may return a complete JSON response. AI needs Fairlead running with a key installed for Bowerbird.
 - **Index encryption**: DPAPI ties the saved index to the Windows user and PC that wrote it. Another user or PC cannot read it and has to rebuild. `BOWERBIRD_INDEX_ENCRYPTION=off` keeps plaintext JSON (for example to inspect it by hand). This protects the file at rest; the running Studio still holds the index in memory, and search results show text snippets.
-- **Incremental index**: a file counts as unchanged when its path, size and modified time match the saved index. A file edited in place with the same size and a restored timestamp would be missed; use `--full` (or the *Rebuild* option) when in doubt. Asking for content or OCR the previous run did not have re-reads every file.
+- **Incremental index**: a file counts as unchanged when its path, size and modified time match the saved index. A file edited in place with the same size and a restored timestamp would be missed; use the CLI's `index build --full` when in doubt. Asking for content or OCR the previous run did not have re-reads every file.
 - **Agents**: The local agents are deterministic and read-only. They are not autonomous LLM tool-call agents.
 - **Search**: Related-file matching is lexical, not neural embeddings. There is no on-device LLM included.
 
@@ -154,7 +154,7 @@ Every model call (AI Chat and the second naming pass) goes to [Fairlead](https:/
 
 The key is read only from Windows Credential Manager, generic credential `Fairlead/Bowerbird`. In Fairlead, create a key for Bowerbird with **Install for this app**. If the credential is missing, AI calls stop with "Open Fairlead and install a key for Bowerbird." There is no environment variable or vault item for the key.
 
-Optional settings in `Configowerbird.env`:
+Optional settings in `Config\bowerbird.env`:
 
 | Variable | Default | Notes |
 | --- | --- | --- |
@@ -195,8 +195,8 @@ GitHub Actions checks PowerShell and JS/DOM syntax, startup prerequisites, both 
 - No endpoint workaround or privilege escalation. Use only software/network paths authorized for your workstation.
 - Cloud AI is disabled unless launched with `-AllowCloudAI`. Only send content authorized for the configured destination.
 - API endpoints require a cryptographically generated session token, reject foreign browser origins and bind to `127.0.0.1`. Do **not** expose the service with proxies or port forwarding.
-- The index may contain **plaintext extracted documents** in `Data/studio-index.json` when content indexing is enabled. `Data/` is ignored by Git.
-- The journal archives previous move runs in `Data/history/`. It is not an ACID filesystem transaction and does not guarantee rollback on power loss. Keep backups of important data and test rules on copies first.
+- The index holds **extracted document text** when content indexing is enabled. Studio stores it, DPAPI-encrypted by default, under `%LOCALAPPDATA%\Bowerbird\State\workspaces`; the legacy intelligence CLI writes `Data/index.json`, and `Data/` is ignored by Git.
+- The journal archives previous move runs in a `history` folder next to it (per workspace under `State\workspaces`, or `Data/history/` for the legacy CLI). It is not an ACID filesystem transaction and does not guarantee rollback on power loss. Keep backups of important data and test rules on copies first.
 - File access is constrained to the selected workspace, with API path checks and reparse-point protections. Review local endpoint policy before handling sensitive workloads.
 
 For the standalone intelligence CLI see [README_INTELLIGENCE.md](README_INTELLIGENCE.md). For original renamer usage see [README_MVP.md](README_MVP.md).
