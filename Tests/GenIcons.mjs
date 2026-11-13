@@ -4,6 +4,18 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { shapesFromSvg, stripHtmlComments } from '../tools/gen-icons.mjs';
 
+const fleetCases = [
+  ['a<!-- x -->b', 'ab'],
+  ['a<!-->b', 'ab'],
+  ['a<!--->b', 'ab'],
+  ['a<!-- x --!>b', 'ab'],
+  ['a<!--unclosed <path d="1"/>', 'a'],
+  ['<!<!---->-->x', 'x'],
+  ['<<!-- -->!--<path/>-->y', 'y'],
+  ['<path d="1"/>', '<path d="1"/>'],
+];
+for (const [input, expected] of fleetCases) assert.equal(stripHtmlComments(input), expected, JSON.stringify(input));
+
 assert.equal(stripHtmlComments('no comment'), 'no comment');
 assert.equal(stripHtmlComments('<!-- @license lucide-static v1.54.0 - ISC -->'), '');
 assert.equal(stripHtmlComments('a<!-- one -->b<!-- two -->c'), 'abc');
