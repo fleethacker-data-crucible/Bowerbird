@@ -46,6 +46,10 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             node Tests/UiContract.js
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            node --check tools/gen-icons.mjs
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            node Tests/GenIcons.mjs
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
       - name: Launch environment diagnostics
         shell: powershell
