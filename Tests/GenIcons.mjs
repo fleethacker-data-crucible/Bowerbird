@@ -10,10 +10,9 @@ assert.equal(stripHtmlComments('a<!-- one -->b<!-- two -->c'), 'abc');
 assert.equal(stripHtmlComments('<!-- <!-- --> -->'), ' -->');
 assert.equal(stripHtmlComments('<!-- unclosed'), '');
 
-// Deleting one <!--...--> match turns this back into <!--. The scan removes that too.
+// A marker split around one comment must not survive.
 const reassembled = '<<!-- -->!--';
 assert.equal(stripHtmlComments(reassembled), '');
-assert.equal(reassembled.replace(/<!--[\s\S]*?-->/g, ''), '<!--');
 
 const license = '<!-- @license lucide-static v1.54.0 - ISC -->\n<svg>\n  <path d="M5 12h14" />\n</svg>\n';
 assert.deepEqual(shapesFromSvg(license), [['path', { d: 'M5 12h14' }]]);
