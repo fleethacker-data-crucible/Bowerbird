@@ -162,6 +162,8 @@ Optional settings in `Config\bowerbird.env`:
 | `BOWERBIRD_FAIRLEAD_MODEL` | `auto` | The Fairlead route name to ask for. |
 | `BOWERBIRD_FAIRLEAD_PRIVACY` | `local` | `local` keeps prompts and images on local models (`X-Fairlead-Privacy: local`). `any` lets Fairlead use cloud models. Launching Studio or the CLI with `-AllowCloudAI` sets `any` for that run. |
 
+The AI key is not a Lazarette item. The check that validated a Lazarette item for that token was dropped; the turnkey contract replaced it.
+
 ## Recommended workflows
 
 **Explore and search**: Launch with a disposable or approved workspace, click *Build Index*, optionally enable content indexing, then use Search, Duplicates, or Insights & Agents.
