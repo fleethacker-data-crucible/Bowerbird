@@ -10,6 +10,8 @@
    names are never read out (they can hold paths); the message stays on screen.
  - Fallback: with no speech support or no local voice, nothing is spoken and the status line says why. The
    on-screen notice (an aria-live region) is always shown whether or not speech works.
+ - An optional speaker (Fairlead, wired by the page) may claim a line. If it cannot play, it calls
+   failed() and this local voice speaks. This file makes no network call.
  Pure logic with injected browser objects, so Tests\Voice.js runs it under Node with a fake clock and a fake synth.
 */
 (function (root) {
@@ -75,7 +77,7 @@
       return a;
     }
 
-    function speak(text, interrupt) {
+    function localSpeak(text, interrupt) {
       var a = availability();
       if (!a.ok) return false;
       try {
@@ -90,6 +92,18 @@
       }
     }
 
+    // A suite speaker may claim the line (return true). If it then cannot play, it calls failed()
+    // and the local voice speaks. Returning false, or throwing, leaves the line to the local voice now.
+    function speak(text, interrupt) {
+      if (typeof o.speaker === 'function') {
+        var claimed = false;
+        try { claimed = o.speaker(text, interrupt, function () { localSpeak(text, interrupt); }) === true; }
+        catch (e) { claimed = false; }
+        if (claimed) return true;
+      }
+      return localSpeak(text, interrupt);
+    }
+
     // Called when the person turns the switch on: confirms the voice works, or says why it cannot.
     function announceEnabled() {
       var a = refreshStatus();
@@ -98,6 +112,7 @@
     }
 
     function stop() {
+      if (typeof o.stopSpeaker === 'function') { try { o.stopSpeaker(); } catch (e) { /* nothing to stop */ } }
       if (synth && typeof synth.cancel === 'function') { try { synth.cancel(); } catch (e) { /* nothing to stop */ } }
     }
 

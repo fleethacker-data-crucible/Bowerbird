@@ -105,6 +105,7 @@ Write-BowerbirdDiagnostic -Event 'BOOT' -Message 'Starting Bowerbird Studio.'
 . (Join-Path $AppRoot 'Private\BowerbirdSemaphoreExport.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdActions.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdLlm.ps1')
+. (Join-Path $AppRoot 'Private\BowerbirdSpeech.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdLoopback.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdWorkspace.ps1')
 . (Join-Path $AppRoot 'Private\BowerbirdSupport.ps1')
@@ -277,7 +278,7 @@ try{
    $res.Headers.Add('X-Bowerbird-Request-ID',$requestId)
    $res.Headers.Add('X-Content-Type-Options','nosniff')
    $res.Headers.Add('Referrer-Policy','no-referrer')
-   $res.Headers.Add('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-src blob:; frame-ancestors 'none'; base-uri 'none'")
+   $res.Headers.Add('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src blob:; connect-src 'self'; object-src 'none'; frame-src blob:; frame-ancestors 'none'; base-uri 'none'")
    if($req.Url.AbsolutePath -eq '/' -and $req.HttpMethod -eq 'GET'){
     $page=Join-Path $AppRoot 'Web\index.html'
     $html=[IO.File]::ReadAllText($page)
@@ -328,6 +329,13 @@ try{
      Enter-BowerbirdJob -Presence $script:Presence
      $body=Read-Body $req
      if($req.Url.AbsolutePath -eq '/api/media'){Write-BowerbirdMedia $res ([string]$body.path)}
+     elseif($req.Url.AbsolutePath -eq '/api/speak'){
+      $audio=Invoke-BowerbirdSpeech -Text ([string]$body.text)
+      $res.ContentType=$audio.ContentType
+      $res.Headers.Add('Cache-Control','no-store')
+      $res.ContentLength64=$audio.Bytes.Length
+      $res.OutputStream.Write($audio.Bytes,0,$audio.Bytes.Length)
+     }
      elseif($req.Url.AbsolutePath -eq '/api/stream'){
       if(-not $AllowCloudAI){throw 'Cloud AI disabled. Restart with -AllowCloudAI using an approved provider.'}
       $messages=Get-BowerbirdMessages $body

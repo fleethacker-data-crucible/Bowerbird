@@ -117,5 +117,6 @@ try{
   foreach($n in $llmVars){[Environment]::SetEnvironmentVariable($n,$savedVars[$n])}
   if($job){Stop-Job -Job $job -ErrorAction SilentlyContinue;Remove-Job -Job $job -Force -ErrorAction SilentlyContinue}
  }
+ & (Join-Path $PSScriptRoot 'Speech.ps1')
 }catch{Write-Host "FAIL: $($_.Exception.Message)" -ForegroundColor Red;exit 1}
 finally{Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue}

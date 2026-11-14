@@ -52,7 +52,8 @@ function setup(opts) {
   const state = { enabled: opts.enabled !== false };
   const progress = voice.create({
     synth, Utterance: opts.noSynth ? null : Utterance, lang: 'en-US', now: clock.now, setTimeout: clock.setTimeout,
-    clearTimeout: clock.clearTimeout, isEnabled: () => state.enabled, onStatus: t => status.push(t)
+    clearTimeout: clock.clearTimeout, isEnabled: () => state.enabled, onStatus: t => status.push(t),
+    speaker: opts.speaker, stopSpeaker: opts.stopSpeaker
   });
   return { clock, synth, status, state, progress };
 }
@@ -175,6 +176,31 @@ assert.strictEqual(voice.elapsedWords(125000), '2 minutes 5 seconds');
   assert.strictEqual(t.progress.announceEnabled(), true);
   assert.strictEqual(t.status[t.status.length - 1], 'Speaks with Local English, installed on this PC.');
   assert.deepStrictEqual(t.synth.spoken.map(u => u.text), ['Spoken progress is on.']);
+}
+
+// Suite speaker claims the line: the local voice stays quiet until the speaker gives it back.
+{
+  const claimed = [];
+  let giveBack = null;
+  const t = setup({
+    speaker: (text, interrupt, failed) => { claimed.push(text); giveBack = failed; return true; }
+  });
+  const job = t.progress.begin();
+  t.clock.advance(4000);
+  assert.deepStrictEqual(claimed, ['Still working. 4 seconds so far.']);
+  assert.strictEqual(t.synth.spoken.length, 0, 'a claimed line is not spoken locally');
+  giveBack();
+  assert.strictEqual(t.synth.spoken[0].text, 'Still working. 4 seconds so far.', 'failed() uses the local voice');
+  job.end(true, 'Index built.');
+  t.progress.stop();
+}
+{
+  const stopped = [];
+  const t = setup({ speaker: () => false, stopSpeaker: () => stopped.push('stopped') });
+  t.progress.announceEnabled();
+  assert.strictEqual(t.synth.spoken[0].text, 'Spoken progress is on.', 'a speaker that declines leaves the local voice');
+  t.progress.stop();
+  assert.deepStrictEqual(stopped, ['stopped']);
 }
 
 console.log('PASS: Bowerbird spoken progress (local voices only, silent fallback, fake clock)');

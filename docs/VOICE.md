@@ -21,8 +21,11 @@ The browser's speech list also holds online voices that send the text to a vendo
 
 If the browser cannot speak, or no voice is installed on this PC (only online ones), nothing is spoken and the status bar says why ("No voice is installed on this PC (online voices are never used). Progress stays on screen."). Nothing else changes; the on-screen notice is the same.
 
+## Suite voice, then the local voice
+
+When the switch is on, the page asks this PC's Bowerbird server to speak the same line through Fairlead `POST /v1/audio/speech` (TalkForge, reached by the router). The request uses the same Fairlead key, label and privacy header as chat, and the server does not log the line. If Fairlead is down, refuses, or the browser cannot play the audio, the local voice above speaks instead. `Web/voice.js` still makes no network call; the page passes a speaker in, and `Tests/Voice.js` checks both outcomes.
+
 ## Not built
 
-- The Fleet contract names TalkForge through Fairlead (`/v1/audio/speech`) as the suite voice. That needs a running Fairlead and TalkForge, so it is not built here; this is the local-browser-voice fallback the contract allows.
 - Speech in (Whisper, Windows speech recognition) is not part of this.
 - Not heard on a workstation: the fake-clock tests prove what is said and when, but a hand check on a PC with an installed voice is still needed (turn the switch on, build an index of a large folder, listen).
