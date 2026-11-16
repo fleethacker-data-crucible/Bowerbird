@@ -72,4 +72,4 @@ Copy the local Session URL from the PowerShell output into an approved browser. 
 - Reports are local JSON files and are not cryptographically encrypted by Bowerbird; apply your organization's existing endpoint/data controls.
 - There are no unapproved admin or execution-policy bypasses in the diagnostic API.
 - Network or backend failures after page load are visible in the browser session recorder; if the server cannot accept a new report, export the memory-only session and run the launcher diagnostics.
-- Tests: `Tests/StudioIntegration.ps1` validates report lifecycle and default-redacted bundles; `Tests/GuiFolderSwitch.js` exercises the live browser navigation, recording and reporting controls on a GitHub-hosted Windows runner.
+- Tests: `Tests/StudioIntegration.ps1` validates report lifecycle and default-redacted bundles. `Tests/GuiFolderSwitch.js` exercises the live browser navigation, recording and reporting controls. It is not a step in `.github/workflows/windows-powershell.yml`; `Tests/BrowserLaunch.ps1` calls it. That job runs on `[self-hosted, Windows, X64]`.
