@@ -13,7 +13,7 @@ Run from Windows PowerShell 5.1:
 .\Start-BowerbirdMVP.ps1 -Undo
 ```
 
-Use `Start-Bowerbird-Console.bat` as a launch alternative for this CLI when allowed by organizational policy; `Start-Bowerbird.bat` opens Bowerbird Studio (the GUI) instead. Review `Config/bowerbird.env.example` for the optional Fairlead settings. AI needs Fairlead running with a key installed for Bowerbird; no secrets go in files.
+Use `Start-Bowerbird-Console.bat` as a launch alternative for this CLI when allowed by organizational policy; `Start-Bowerbird.bat` opens Bowerbird Studio (the GUI) instead. Review `Config/bowerbird.env.example` for the optional Fairlead settings. AI needs Fairlead running with a key installed for Bowerbird; no secrets go in files. That key is not a Lazarette item. The check that validated a Lazarette item for the AI token was dropped; the turnkey contract replaced it.
 
 ## How it works
 
