@@ -42,7 +42,8 @@ try{
   }
  }
  # Served by the request loop itself, not the dispatcher: tab presence, End session, binary media, SSE.
- $serverOnly=@('/api/heartbeat','/api/session/stop','/api/media','/api/stream')
+ # /api/speak returns audio bytes (Fairlead speech), the same class of response as media and the stream.
+ $serverOnly=@('/api/heartbeat','/api/session/stop','/api/media','/api/stream','/api/speak')
  Assert ($uiRoutes.Count -ge 20) ('UI routes found: '+$uiRoutes.Count)
  foreach($route in $uiRoutes){
   if($serverOnly -contains $route){continue}

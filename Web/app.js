@@ -43,7 +43,34 @@ async function api(route,body={}){
  if(!response.ok){if(route!=='client-event')record('API_ERROR',route);throw Error((data.error||'Request failed')+(data.requestId?' [Request '+data.requestId+']':''))}
  return data
 }
-const spoken=window.BowerbirdVoice?window.BowerbirdVoice.create({synth:window.speechSynthesis,Utterance:window.SpeechSynthesisUtterance,lang:document.documentElement.lang||navigator.language||'en-US',isEnabled:()=>!!$('voice-toggle')&&$('voice-toggle').checked,onStatus:t=>{$('voice-status').textContent=t}}):null;
+let suiteAudio=null,suiteAbort=null,suiteGeneration=0;
+function stopSuiteSpeech(){
+ if(suiteAbort){try{suiteAbort.abort()}catch(_){/* already finished */}suiteAbort=null}
+ if(suiteAudio){try{suiteAudio.pause()}catch(_){/* already finished */}suiteAudio=null}
+}
+// Fairlead /v1/audio/speech first. Returning true claims the line; any miss calls failed() so the local voice speaks.
+function suiteSpeak(text,interrupt,failed){
+ if(!state.token)return false;
+ const mine=++suiteGeneration;
+ stopSuiteSpeech();
+ const ctrl=new AbortController();
+ suiteAbort=ctrl;
+ fetch('/api/speak',{method:'POST',headers:{'Content-Type':'application/json','X-Bowerbird-Token':state.token},body:JSON.stringify({text}),cache:'no-store',signal:ctrl.signal})
+  .then(r=>{if(!r.ok||mine!==suiteGeneration)throw Error('speech');return r.blob()})
+  .then(blob=>{
+   if(mine!==suiteGeneration)return;
+   const url=URL.createObjectURL(blob);
+   const audio=new Audio(url);
+   suiteAudio=audio;
+   const drop=()=>URL.revokeObjectURL(url);
+   audio.onended=drop;
+   audio.onerror=()=>{drop();if(mine===suiteGeneration)failed()};
+   audio.play().catch(()=>{drop();if(mine===suiteGeneration)failed()});
+  })
+  .catch(err=>{if(mine!==suiteGeneration)return;if(err&&err.name==='AbortError')return;failed()});
+ return true;
+}
+const spoken=window.BowerbirdVoice?window.BowerbirdVoice.create({synth:window.speechSynthesis,Utterance:window.SpeechSynthesisUtterance,lang:document.documentElement.lang||navigator.language||'en-US',isEnabled:()=>!!$('voice-toggle')&&$('voice-toggle').checked,onStatus:t=>{$('voice-status').textContent=t},speaker:suiteSpeak,stopSpeaker:stopSuiteSpeech}):null;
 async function run(action,done){const job=spoken?spoken.begin():null;try{notify('Working…');const result=await action();notify(done||'Done');if(job)job.end(true,done||'Done');return result}catch(err){notify(err.message,true);if(job)job.end(false);return null}}
 function initSpokenProgress(){
  const box=$('voice-toggle');if(!spoken){$('voice-status').textContent='Spoken progress is unavailable. Progress stays on screen.';box.disabled=true;return}
