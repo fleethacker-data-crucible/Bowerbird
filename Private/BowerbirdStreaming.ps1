@@ -24,6 +24,8 @@ function Invoke-BowerbirdStreamingChat {
  $request.Method='POST';$request.ContentType='application/json; charset=utf-8'
  $request.Accept='text/event-stream,application/json'
  $request.Timeout=$TimeoutSeconds*1000;$request.ReadWriteTimeout=$TimeoutSeconds*1000
+ $request.Proxy=$null
+ $request.AllowAutoRedirect=$false
  foreach($name in $headers.Keys){$request.Headers[$name]=[string]$headers[$name]}
  $request.ContentLength=$bytes.Length
  $remote=$null;$responseReader=$null

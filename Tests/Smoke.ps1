@@ -38,6 +38,11 @@ try{
  $llmVars=@('BOWERBIRD_FAIRLEAD_URL','BOWERBIRD_FAIRLEAD_MODEL','BOWERBIRD_FAIRLEAD_PRIVACY')
  $savedVars=@{};foreach($n in $llmVars){$savedVars[$n]=[Environment]::GetEnvironmentVariable($n);[Environment]::SetEnvironmentVariable($n,$null)}
  $savedReader=$script:BowerbirdCredentialReader
+ $savedTokenReader=$script:BowerbirdLocalTokenReader
+ $savedPrepare=$script:BowerbirdFairleadPrepare
+ # The fake Fairlead below is not a real one. The id check and the start call are covered in FairleadConnection.ps1.
+ $script:BowerbirdLocalTokenReader={param([string]$Path) $null}
+ $script:BowerbirdFairleadPrepare={param($Config)}
  $job=$null
  try{
   $cfg=Get-BowerbirdLlmConfig
@@ -112,10 +117,14 @@ try{
   Assert (([regex]::Matches($seen,'(?im)^x-fairlead-label:\s*Bowerbird\s*$')).Count -eq 2) 'Both calls send the label'
   Assert (([regex]::Matches($seen,'(?im)^x-fairlead-privacy:\s*local\s*$')).Count -eq 2) 'Both calls keep prompts local by default'
   Write-Host 'PASS: Fairlead configuration, loopback-only address, Credential Manager key, headers, chat and streaming' -ForegroundColor Green
+  & (Join-Path $PSScriptRoot 'FairleadConnection.ps1')
  }finally{
   $script:BowerbirdCredentialReader=$savedReader
+  $script:BowerbirdLocalTokenReader=$savedTokenReader
+  $script:BowerbirdFairleadPrepare=$savedPrepare
   foreach($n in $llmVars){[Environment]::SetEnvironmentVariable($n,$savedVars[$n])}
   if($job){Stop-Job -Job $job -ErrorAction SilentlyContinue;Remove-Job -Job $job -Force -ErrorAction SilentlyContinue}
  }
+ & (Join-Path $PSScriptRoot 'Speech.ps1')
 }catch{Write-Host "FAIL: $($_.Exception.Message)" -ForegroundColor Red;exit 1}
 finally{Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue}

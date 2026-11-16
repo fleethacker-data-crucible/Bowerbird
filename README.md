@@ -152,7 +152,7 @@ If the GUI will not launch at all, run `Start-Bowerbird.bat diagnostics`. See [D
 
 Every model call (AI Chat and the second naming pass) goes to [Fairlead](https://github.com/fleethacker-data-crucible/Fairlead), the Fleet model router on this PC, at `http://127.0.0.1:8776/v1/chat/completions`. Fairlead owns the endpoints, provider keys and fallbacks; Bowerbird sends a route name and its own Fairlead key, and says who it is with `X-Fairlead-Label: Bowerbird`.
 
-The key is read only from Windows Credential Manager, generic credential `Fairlead/Bowerbird`. In Fairlead, create a key for Bowerbird with **Install for this app**. If the credential is missing, AI calls stop with "Open Fairlead and install a key for Bowerbird." There is no environment variable or vault item for the key.
+The key is the Windows Credential Manager generic credential `Fairlead/Bowerbird` when that exists. In Fairlead, create one with **Install for this app**. Otherwise Bowerbird reads the first line of `%LOCALAPPDATA%\Fairlead\local-token`, the key Fairlead writes for this Windows account. Before the key is sent, Bowerbird checks `GET /__fleethacker/id`: the tool is `fairlead`, the pid owns the port, and `path` is that process's executable or `-File` script. When nothing is listening on port 8776, Bowerbird starts Fairlead with FleetPort's `Start-FleetService -Name fairlead` and waits, instead of asking for a key. If neither key is available, AI calls stop with "Open Fairlead and install a key for Bowerbird." There is no environment variable or vault item for the key.
 
 Optional settings in `Config\bowerbird.env`:
 
